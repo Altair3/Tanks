@@ -115,6 +115,24 @@ class Calculations(object):
     def angle(self,tank,target):
         angle = math.atan2((target.y-tank.y),(target.x-tank.x))
         return angle
+        
+    #returns the closest point on the line segment formed by lineP1-lineP2 to point
+    def closestPointOnLine(self, point, lineP1, lineP2):
+        lineLengthSquared = self.distance(lineP1, lineP2)
+        if lineLengthSquared == 0.0:
+            return self.distance(point, lineP1)
+        
+        tx = (point.x-lineP1.x)*(lineP2.x-lineP1.x)+(point.y-lineP1.y)*(lineP2.y-lineP1.y)
+        tx = tx/((lineP2.x-lineP1.x)**2 + (lineP2.y-lineP1.y)**2)
+        
+        if tx < 0.0:
+            return lineP1
+        elif tx > 1.0:
+            return lineP2
+        else:
+            pointOnLine.x = lineP1.x + tx * (lineP2.x - lineP1.x)
+            pointOnLine.y = lineP1.y + tx * (lineP2.y - lineP1.y)
+            return pointOnLine
     
     """ returns the change in x and y for an attractive field, """
     def getAttractiveField(self,tank,target,oldTank,oldTarget,elapsedTime,spread,radius):
@@ -158,6 +176,14 @@ class Calculations(object):
         
         elif d > (spread + radius):                
             return deltax,deltay    
+            
+    #target should be a line with variables p1 and p2 being points with x and y
+    def getTangentialField(self, tank, target, oldTank, elapsedTime):
+        tankPosition.x = tank.x
+        tankPosition.y = tank.y
+        closestPoint = self.closestPointOnLine(tankPosition, target.p1, target.p2)
+        
+        if self.distance(tankPosition, closestPoint) < target.threshold:
             
 
 
