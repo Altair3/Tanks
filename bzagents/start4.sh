@@ -1,4 +1,4 @@
-python randomAgent.py localhost $1 &
-python randomAgent.py localhost $2 &
-python randomAgent.py localhost $3 &
-python randomAgent.py localhost $4 &
+python DumbAgent.py localhost $1 &
+python DumbAgent.py localhost $2 &
+python DumbAgent.py localhost $3 &
+python DumbAgent.py localhost $4 &

@@ -9,6 +9,7 @@ import math
 import time
 
 from bzrc import BZRC, Command
+from geo import Point, Line
 
 class PFAgent(object):
     
@@ -115,24 +116,6 @@ class Calculations(object):
     def angle(self,tank,target):
         angle = math.atan2((target.y-tank.y),(target.x-tank.x))
         return angle
-        
-    #returns the closest point on the line segment formed by lineP1-lineP2 to point
-    def closestPointOnLine(self, point, lineP1, lineP2):
-        lineLengthSquared = self.distance(lineP1, lineP2)
-        if lineLengthSquared == 0.0:
-            return self.distance(point, lineP1)
-        
-        tx = (point.x-lineP1.x)*(lineP2.x-lineP1.x)+(point.y-lineP1.y)*(lineP2.y-lineP1.y)
-        tx = tx/((lineP2.x-lineP1.x)**2 + (lineP2.y-lineP1.y)**2)
-        
-        if tx < 0.0:
-            return lineP1
-        elif tx > 1.0:
-            return lineP2
-        else:
-            pointOnLine.x = lineP1.x + tx * (lineP2.x - lineP1.x)
-            pointOnLine.y = lineP1.y + tx * (lineP2.y - lineP1.y)
-            return pointOnLine
     
     """ returns the change in x and y for an attractive field, """
     def getAttractiveField(self,tank,target,oldTank,oldTarget,elapsedTime,spread,radius):
@@ -177,17 +160,18 @@ class Calculations(object):
         elif d > (spread + radius):                
             return deltax,deltay    
             
-    #target should be a line with variables p1 and p2 being points with x and y
+    #target is a Line object
     def getTangentialField(self, tank, target, oldTank, elapsedTime):
-        tankPosition.x = tank.x
-        tankPosition.y = tank.y
-        closestPoint = self.closestPointOnLine(tankPosition, target.p1, target.p2)
+        tankPosition = Point(tank.x, tank.y)
+        closestPoint = tankPosition.closestPointOnLine(target.p1, target.p2)
         
-        if self.distance(tankPosition, closestPoint) < target.threshold:
-            
-
-
-
+        if self.distance(tankPosition, closestPoint) < target.spread:
+            lineToTarget = Line(tankPosition, closestPoint)
+            if target.isPerpendicular(lineToTarget):
+                midpoint = target.getMidpoint()
+                
+                
+                
 def main():
     # Process CLI arguments.
     try:
@@ -203,10 +187,23 @@ def main():
     bzrc = BZRC(host, int(port))
 
     agent = PFAgent(bzrc)
+    
+    point1 = Point(4.0, 1.1)
+    point2 = Point(-2.0, 3.1)
+    point3 = Point(-1.0, 0.1)
+    
+    line1 = Line(point1, point2)
+    
+    point4 = point3.closestPointOnLine(line1)
+    
+    line2 = Line(point3, point4)
+    
+    print line1.getMidpoint().x, line1.getMidpoint().y
 
     prev_time = time.time()
 
     # Run the agent
+    '''
     try:
         while True:
             time_diff = time.time() - prev_time
@@ -214,6 +211,7 @@ def main():
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
+    '''
 
 
 if __name__ == '__main__':
