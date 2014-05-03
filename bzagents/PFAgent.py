@@ -9,7 +9,6 @@ import math
 import time
 
 from bzrc import BZRC, Command
-from geo import Point, Line
 
 class PFAgent(object):
     
@@ -17,12 +16,16 @@ class PFAgent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
-        self.hasFlag = False
-   
+        self.throttle = .25
+        self.obstacles = bzrc.get_obstacles()
+        self.fields = Calculations()
         
     
     def tick(self, time_diff):
+        print "the diff" , time_diff
         """Some time has passed; decide what to do next."""
+        if time_diff == 0:
+            return
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
         
         ''' list of teammates with velocities and position and flag posession etc. '''
@@ -38,10 +41,38 @@ class PFAgent(object):
                         self.constants['team']]
 
         self.commands = []
-
+        i = 0
         for tank in mytanks:
-            
-            self.attack_enemies(tank)
+            totalX = 0
+            totalY = 0
+            '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
+            tank.oldError = 0
+            if (i % 2) == 0:
+                deltaX,deltaY = self.fields.getAttractiveField(tank, flags[1], tank.oldError, time_diff, 800, 1)
+            else:
+                deltaX,deltaY = self.fields.getAttractiveField(tank, flags[2], tank.oldError, time_diff, 800, 1)
+            totalX += deltaX
+            totalY += deltaY
+            i += 1
+            for obstacle in self.obstacles:
+               
+                '''deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle,tank.oldError,time_diff, 50,10)
+                totalX += deltaX
+                totalY += deltaY'''
+            '''can also calculate a repulsion for enemies'''
+            for enemy in self.enemies:             
+                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, tank.oldError, time_diff, 15, 1)
+                totalX += deltaX
+                totalY += deltaY
+            print "deltaX" , totalX
+            print "deltaY" , totalY
+            theta = math.atan2(totalY, totalX)
+            theta = theta - tank.angle
+            print "theta" , theta
+            command = Command(tank.index,self.throttle*abs(totalY+totalX),theta,False)
+            self.commands.append(command)
+        #command = Command(tank.index,)
+        # self.attack_enemies(tank)
             
         '''should we log these results?'''
         results = self.bzrc.do_commands(self.commands)
@@ -72,6 +103,7 @@ class PFAgent(object):
         relative_angle = self.normalize_angle(target_angle - tank.angle)
         command = Command(tank.index, 1, 2 * relative_angle, True)
         self.commands.append(command)
+        
 
     def normalize_angle(self, angle):
         """Make any angle be between +/- pi."""
@@ -83,31 +115,32 @@ class PFAgent(object):
         return angle
     
     
-    
-    
+  
     
 """ A class to perform the potential field and controller calculations
     problem is we need to pass in elapsedtimes and spread and radius, etc.
     my thoughts are to create different instances of this with there own spread and radius
     which could represent different goals/obstacles and then we just make a bunch of different Calculations objects
     then they each can be used more loosely in the Agent class itself """
+    
 class Calculations(object):
     def __init__ (self):
         self.Kp = .1
         self.Kd = .5
      
-    
-    def calculateAlpha(self,tank,target,oldTank,oldTarget,elapsedTime):
+    ''' The PD controller calculations'''
+    def calculateAlpha(self,tank,target,oldError,elapsedTime):
         '''tank has x,y,angle,etc. use bzrc to see the tank'''
         # y(t) - x(t) is error
         error = (target.y - tank.y) + (target.x - tank.x)
         alpha = self.Kp*error
-        derivative = error - ((oldTarget.y-oldTank.y) + (oldTarget.x-oldTank.x))
+        derivative = error - oldError
         dt = elapsedTime
         derivative /= dt 
         alpha += self.Kd*derivative
-      
-        return alpha
+        #update the error on the tank
+        tank.oldError = error
+        return 1 # return alpha here when it works
     
     def distance(self, tank,target):
         distance = math.sqrt((target.x-tank.x)**2 + (target.y-tank.y)**2)
@@ -118,8 +151,8 @@ class Calculations(object):
         return angle
     
     """ returns the change in x and y for an attractive field, """
-    def getAttractiveField(self,tank,target,oldTank,oldTarget,elapsedTime,spread,radius):
-        alpha = self.calculateAlpha(tank, target, oldTank, oldTarget, elapsedTime)
+    def getAttractiveField(self,tank,target,oldError,elapsedTime,spread,radius):
+        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -135,9 +168,10 @@ class Calculations(object):
             deltax = alpha * spread * math.cos(theta)
             deltay = alpha * spread * math.sin(theta)
             return deltax,deltay
+        
     """ returns the change in x and y for a repulsive field """
-    def getRepulsiveField(self,tank,target,oldTank,oldTarget,elapsedTime,spread,radius):
-        alpha = self.calculateAlpha(tank, target, oldTank, oldTarget, elapsedTime)
+    def getRepulsiveField(self,tank,target,oldError,elapsedTime,spread,radius):
+        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -159,8 +193,9 @@ class Calculations(object):
         
         elif d > (spread + radius):                
             return deltax,deltay    
-            
-    #target is a Line object
+         
+         #target is a Line object
+    
     def getTangentialField(self, tank, target, oldTank, elapsedTime):
         tankPosition = Point(tank.x, tank.y)
         closestPoint = tankPosition.closestPointOnLine(target.p1, target.p2)
@@ -168,10 +203,40 @@ class Calculations(object):
         if self.distance(tankPosition, closestPoint) < target.spread:
             lineToTarget = Line(tankPosition, closestPoint)
             if target.isPerpendicular(lineToTarget):
-                midpoint = target.getMidpoint()
-                
-                
-                
+                midpoint = target.getMidpoint()   
+    
+    
+    def getTangentialField2(self,tank,target,oldError,elapsedTime,spread,radius,direction):
+        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
+        deltax = 0
+        deltay = 0
+        d = self.distance(tank, target)
+        theta = self.angle(tank, target)
+        if direction == "CW":
+            theta  = theta - math.pi/2
+        elif direction == "CCW":
+            theta = theta + math.pi/2
+            
+        if d < radius:    
+            signx = math.copysign(1.0,math.cos(theta))
+            signy = math.copysign(1.0, math.sin(theta))
+            ''' inthe math online it says to use infinity, not sure what we want to do here'''
+            deltax = -1 * signx * 10000000      
+            deltay = -1 * signy * 10000000   
+            return deltax,deltay
+        
+        elif radius <= d and d <= (spread + radius):
+            
+            deltax = -1 * alpha * (spread+radius-d)*math.cos(theta)
+            deltay = -1 * alpha * (spread+radius-d)*math.sin(theta)
+            return deltax,deltay
+        
+        elif d > (spread + radius):                
+            return deltax,deltay    
+            
+
+
+
 def main():
     # Process CLI arguments.
     try:
@@ -184,34 +249,22 @@ def main():
 
     # Connect.
     #bzrc = BZRC(host, int(port), debug=True)
-    bzrc = BZRC(host, int(port))
-
+    #bzrc = BZRC(host, int(port))
+    bzrc = BZRC(host, 39491)
     agent = PFAgent(bzrc)
-    
-    point1 = Point(4.0, 1.1)
-    point2 = Point(-2.0, 3.1)
-    point3 = Point(-1.0, 0.1)
-    
-    line1 = Line(point1, point2)
-    
-    point4 = point3.closestPointOnLine(line1)
-    
-    line2 = Line(point3, point4)
-    
-    print line1.getMidpoint().x, line1.getMidpoint().y
 
     prev_time = time.time()
 
     # Run the agent
-    '''
     try:
         while True:
             time_diff = time.time() - prev_time
+            prev_time = time.time()
             agent.tick(time_diff)
+            
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
-    '''
 
 
 if __name__ == '__main__':
