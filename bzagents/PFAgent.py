@@ -193,16 +193,23 @@ class Calculations(object):
         
         elif d > (spread + radius):                
             return deltax,deltay    
-         
-         #target is a Line object
-    
-    def getTangentialField(self, tank, target, oldTank, elapsedTime):
+
+
+
+    #target is a Line object
+    def getTangentialObstacleField(self, tank, target, oldTank, elapsedTime):
+        
+        deltaX = 0.0
+        deltaY = 0.0
+        
+
         tankPosition = Point(tank.x, tank.y)
         closestPoint = tankPosition.closestPointOnLine(target.p1, target.p2)
         
         if self.distance(tankPosition, closestPoint) < target.spread:
             lineToTarget = Line(tankPosition, closestPoint)
             if target.isPerpendicular(lineToTarget):
+
                 midpoint = target.getMidpoint()   
     
     
@@ -237,6 +244,30 @@ class Calculations(object):
 
 
 
+=======
+                midpoint = target.getMidpoint()
+                if closestPoint.x < midpoint.x:
+                    deltaX = -1.0
+                elif closestPoint.x > midpoint.x:
+                    deltaX = 1.0
+                else:
+                    deltaX = 0.0
+                    
+                if closestPoint.y < midpoint.y:
+                    deltaY = -1.0
+                elif closestPoint.y > midpoint.y:
+                    deltaY = 1.0
+                else:
+                    deltaY = 0.0
+                    
+                
+                
+                    
+        return deltaX, deltaY
+                
+                
+                
+>>>>>>> d929e81c59f414aea8f3d208f91cd6b588260f85
 def main():
     # Process CLI arguments.
     try:
