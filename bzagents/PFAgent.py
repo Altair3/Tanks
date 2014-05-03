@@ -194,23 +194,46 @@ class Calculations(object):
         elif d > (spread + radius):                
             return deltax,deltay    
 
-
-
-    #target is a Line object
     def getTangentialObstacleField(self, tank, target, oldTank, elapsedTime):
         
         deltaX = 0.0
         deltaY = 0.0
         
-
         tankPosition = Point(tank.x, tank.y)
         closestPoint = tankPosition.closestPointOnLine(target.p1, target.p2)
         
         if self.distance(tankPosition, closestPoint) < target.spread:
             lineToTarget = Line(tankPosition, closestPoint)
             if target.isPerpendicular(lineToTarget):
-
-                midpoint = target.getMidpoint()   
+                midpoint = target.getMidpoint()
+                if closestPoint.x < midpoint.x:
+                    deltaX = -1.0
+                elif closestPoint.x > midpoint.x:
+                    deltaX = 1.0
+                else:
+                    deltaX = 0.0
+                    
+                if closestPoint.y < midpoint.y:
+                    if target.getSlope() == 0.0:
+                        deltaY = 0.0
+                    elif target.getSlope() == None:
+                        deltaY = -1.0
+                    else:
+                        deltaY = -1.0 * target.getSlope()
+                elif closestPoint.y > midpoint.y:
+                    if target.getSlope() == 0:
+                        deltaY = 0.0
+                    elif target.getSlope() == None:
+                        deltaY = 1.0
+                    else:
+                        deltaY = 1.0 * target.getSlope()
+                else:
+                    deltaY = 0.0
+                    
+                
+                
+                    
+        return deltaX, deltaY  
     
     
     def getTangentialField2(self,tank,target,oldError,elapsedTime,spread,radius,direction):
@@ -240,24 +263,6 @@ class Calculations(object):
         
         elif d > (spread + radius):                
             return deltax,deltay    
-            
-                midpoint = target.getMidpoint()
-                if closestPoint.x < midpoint.x:
-                    deltaX = -1.0
-                elif closestPoint.x > midpoint.x:
-                    deltaX = 1.0
-                else:
-                    deltaX = 0.0
-                    
-                if closestPoint.y < midpoint.y:
-                    deltaY = -1.0
-                elif closestPoint.y > midpoint.y:
-                    deltaY = 1.0
-                else:
-                    deltaY = 0.0
-           
-                    
-        return deltaX, deltaY
 
 
 def main():
