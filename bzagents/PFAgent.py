@@ -106,7 +106,7 @@ class Calculations(object):
         derivative /= dt 
         alpha += self.Kd*derivative
       
-        return self.alpha
+        return alpha
     
     def distance(self, tank,target):
         distance = math.sqrt((target.x-tank.x)**2 + (target.y-tank.y)**2)
