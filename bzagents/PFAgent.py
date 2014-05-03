@@ -181,8 +181,8 @@ class Calculations(object):
             signx = math.copysign(1.0,math.cos(theta))
             signy = math.copysign(1.0, math.sin(theta))
             ''' inthe math online it says to use infinity, not sure what we want to do here'''
-            deltax = -1 * signx * 10000000      
-            deltay = -1 * signy * 10000000   
+            deltax = -1 * signx * 10000000   
+            deltay = -1 * signy * 10000000
             return deltax,deltay
         
         elif radius <= d and d <= (spread + radius):
@@ -241,10 +241,6 @@ class Calculations(object):
         elif d > (spread + radius):                
             return deltax,deltay    
             
-
-
-
-=======
                 midpoint = target.getMidpoint()
                 if closestPoint.x < midpoint.x:
                     deltaX = -1.0
@@ -259,15 +255,11 @@ class Calculations(object):
                     deltaY = 1.0
                 else:
                     deltaY = 0.0
-                    
-                
-                
+           
                     
         return deltaX, deltaY
-                
-                
-                
->>>>>>> d929e81c59f414aea8f3d208f91cd6b588260f85
+
+
 def main():
     # Process CLI arguments.
     try:
