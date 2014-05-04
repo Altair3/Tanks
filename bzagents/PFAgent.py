@@ -47,13 +47,12 @@ class PFAgent(object):
             totalY = 0
             '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
             tank.oldError = 0
-            if (i % 2) == 0:
-                deltaX,deltaY = self.fields.getAttractiveField(tank, flags[1], tank.oldError, time_diff, 800, 1)
-            else:
-                deltaX,deltaY = self.fields.getAttractiveField(tank, flags[2], tank.oldError, time_diff, 800, 1)
+          
+            deltaX,deltaY = self.fields.getAttractiveField(tank, flags[0], tank.oldError, time_diff, 800, 1)
+          
             totalX += deltaX
             totalY += deltaY
-            i += 1
+            i+=1
             for obstacle in self.obstacles:
                
                 '''deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle,tank.oldError,time_diff, 50,10)
@@ -61,11 +60,14 @@ class PFAgent(object):
                 totalY += deltaY'''
             '''can also calculate a repulsion for enemies'''
             for enemy in self.enemies:             
-                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, tank.oldError, time_diff, 15, 1)
+                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, tank.oldError, time_diff, 150, 1)
                 totalX += deltaX
                 totalY += deltaY
             print "deltaX" , totalX
             print "deltaY" , totalY
+            '''this is calculating the angle between where you currently are and where you are trying to be updates accordingly'''
+            ''' The throttle decreases speed as you approach the object of interest, in theory
+                totalX and Y are where you want to be'''
             theta = math.atan2(totalY, totalX)
             theta = theta - tank.angle
             print "theta" , theta
@@ -277,8 +279,8 @@ def main():
 
     # Connect.
     #bzrc = BZRC(host, int(port), debug=True)
-    #bzrc = BZRC(host, int(port))
-    bzrc = BZRC(host, 39491)
+    bzrc = BZRC(host, int(port))
+    #bzrc = BZRC(host, 39491)
     agent = PFAgent(bzrc)
 
     prev_time = time.time()
