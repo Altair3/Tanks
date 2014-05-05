@@ -9,6 +9,7 @@ import math
 import time
 
 from bzrc import BZRC, Command
+from obstacle import Obstacle
 
 class PFAgent(object):
     
@@ -17,11 +18,11 @@ class PFAgent(object):
         self.constants = self.bzrc.get_constants()
         self.commands = []
         self.throttle = .25
-        self.obstacles = bzrc.get_obstacles()
+        self.obstacles = []
         self.fields = Calculations()
-     
         
-        
+        for obs in bzrc.get_obstacles():
+            self.obstacles.append(Obstacle(obs))
     
     def tick(self, time_diff):
         print "the diff" , time_diff
@@ -248,6 +249,7 @@ def main():
     prev_time = time.time()
 
     # Run the agent
+    
     try:
         while True:
             time_diff = time.time() - prev_time
