@@ -56,14 +56,18 @@ class PFAgent(object):
             totalX += deltaX
             totalY += deltaY
             
+            
             for obstacle in self.obstacles:
                
-                '''deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle,tank.oldError,time_diff, 50,10)
+                #deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle.midpoint, 100, 20)
+                deltaX,deltaY = self.fields.getTangentialField2(tank,obstacle.midpoint, obstacle.distanceToCenter, obstacle.distanceToCenter, "CCW")
                 totalX += deltaX
-                totalY += deltaY'''
+                totalY += deltaY
+              
+            
             '''can also calculate a repulsion for enemies'''
             for enemy in self.enemies:             
-                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, 150, 1)
+                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, 25, 1)
                 totalX += deltaX
                 totalY += deltaY
            
@@ -202,7 +206,7 @@ class Calculations(object):
     
     
     def getTangentialField2(self,tank,target,spread,radius,direction):
-        alpha = 1
+        alpha = .25
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -227,7 +231,7 @@ class Calculations(object):
             return deltax,deltay
         
         elif d > (spread + radius):                
-            return deltax,deltay    
+            return deltax,deltay
 
 
 def main():

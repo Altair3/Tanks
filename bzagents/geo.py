@@ -6,8 +6,8 @@ class Point(object):
         self.x = x
         self.y = y
 	
-    def distance(self, p1, p2):
-        distance = math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2)
+    def distance(self, p2):
+        distance = math.sqrt((self.x-p2.x)**2 + (self.y-p2.y)**2)
         return distance
     
 	#returns the closest point on the line segment formed by lineP1-lineP2 to the calling point
@@ -15,9 +15,9 @@ class Point(object):
         lineP1 = line.p1
         lineP2 = line.p2
         
-        lineLengthSquared = self.distance(lineP1, lineP2)
+        lineLengthSquared = lineP1.distance(lineP2)
         if lineLengthSquared == 0.0:
-            return self.distance(self, lineP1)
+            return self.distance(lineP1)
         
         tx = (self.x-lineP1.x)*(lineP2.x-lineP1.x)+(self.y-lineP1.y)*(lineP2.y-lineP1.y)
         tx = tx/((lineP2.x-lineP1.x)**2 + (lineP2.y-lineP1.y)**2)
