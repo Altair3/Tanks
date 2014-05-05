@@ -19,6 +19,8 @@ class PFAgent(object):
         self.throttle = .25
         self.obstacles = bzrc.get_obstacles()
         self.fields = Calculations()
+     
+        
         
     
     def tick(self, time_diff):
@@ -42,13 +44,13 @@ class PFAgent(object):
 
         self.commands = []
         
-        for tank in mytanks:
+        for tank in self.mytanks:
             totalX = 0
             totalY = 0
             '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
-            tank.oldError = 0
           
-            deltaX,deltaY = self.fields.getAttractiveField(tank, flags[0], tank.oldError, time_diff, 800, 1)
+            
+            deltaX,deltaY = self.fields.getAttractiveField(tank, flags[3], 800, 1)
           
             totalX += deltaX
             totalY += deltaY
@@ -60,7 +62,7 @@ class PFAgent(object):
                 totalY += deltaY'''
             '''can also calculate a repulsion for enemies'''
             for enemy in self.enemies:             
-                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, tank.oldError, time_diff, 150, 1)
+                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, 150, 1)
                 totalX += deltaX
                 totalY += deltaY
            
@@ -68,8 +70,9 @@ class PFAgent(object):
             ''' The throttle decreases speed as you approach the object of interest, in theory
                 totalX and Y are where you want to be'''
             theta = math.atan2(totalY, totalX)
-            theta = theta - tank.angle
-           
+            # theta = theta - tank.angle
+            theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
+            #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
             command = Command(tank.index,self.throttle*abs(totalY+totalX),theta,False)
             self.commands.append(command)
      
@@ -90,10 +93,10 @@ class Calculations(object):
         self.Kd = .5
      
     ''' The PD controller calculations'''
-    def calculateAlpha(self,tank,target,oldError,elapsedTime):
+    def calculateAlpha(self,current,target,oldError,elapsedTime,tank):
         '''tank has x,y,angle,etc. use bzrc to see the tank'''
         # y(t) - x(t) is error
-        error = (target.y - tank.y) + (target.x - tank.x)
+        error = (target) - (current)
         alpha = self.Kp*error
         derivative = error - oldError
         dt = elapsedTime
@@ -101,7 +104,7 @@ class Calculations(object):
         alpha += self.Kd*derivative
         #update the error on the tank
         tank.oldError = error
-        return 1 # return alpha here when it works
+        return alpha # return alpha here when it works
     
     def distance(self, tank,target):
         distance = math.sqrt((target.x-tank.x)**2 + (target.y-tank.y)**2)
@@ -112,8 +115,8 @@ class Calculations(object):
         return angle
     
     """ returns the change in x and y for an attractive field, """
-    def getAttractiveField(self,tank,target,oldError,elapsedTime,spread,radius):
-        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
+    def getAttractiveField(self,tank,target,spread,radius):
+        alpha = 1       
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -131,8 +134,8 @@ class Calculations(object):
             return deltax,deltay
         
     """ returns the change in x and y for a repulsive field """
-    def getRepulsiveField(self,tank,target,oldError,elapsedTime,spread,radius):
-        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
+    def getRepulsiveField(self,tank,target,spread,radius):
+        alpha = 1
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -197,8 +200,8 @@ class Calculations(object):
         return deltaX, deltaY  
     
     
-    def getTangentialField2(self,tank,target,oldError,elapsedTime,spread,radius,direction):
-        alpha = self.calculateAlpha(tank, target, oldError, elapsedTime)
+    def getTangentialField2(self,tank,target,spread,radius,direction):
+        alpha = 1
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)

@@ -36,6 +36,10 @@ class BZRC:
         self.conn = sock.makefile(bufsize=1)
 
         self.handshake()
+        self.tanks = []
+        for i in range(10):
+            self.tanks.append(Answer())
+            self.tanks[i].oldError = 0
 
     def handshake(self):
         """Perform the handshake with the remote tanks."""
@@ -224,30 +228,32 @@ class BZRC:
         line = self.read_arr()
         if line[0] != 'begin':
             self.die_confused('begin', line)
-
-        tanks = []
+        
+        i = 0
         while True:
             line = self.read_arr()
             if line[0] == 'mytank':
-                tank = Answer()
-                tank.index = int(line[1])
-                tank.callsign = line[2]
-                tank.status = line[3]
-                tank.shots_avail = int(line[4])
-                tank.time_to_reload = float(line[5])
-                tank.flag = line[6]
-                tank.x = float(line[7])
-                tank.y = float(line[8])
-                tank.angle = float(line[9])
-                tank.vx = float(line[10])
-                tank.vy = float(line[11])
-                tank.angvel = float(line[12])
-                tanks.append(tank)
+                
+                self.tanks[i].index = int(line[1])
+                self.tanks[i].callsign = line[2]
+                self.tanks[i].status = line[3]
+                self.tanks[i].shots_avail = int(line[4])
+                self.tanks[i].time_to_reload = float(line[5])
+                self.tanks[i].flag = line[6]
+                self.tanks[i].x = float(line[7])
+                self.tanks[i].y = float(line[8])
+                self.tanks[i].angle = float(line[9])
+                self.tanks[i].vx = float(line[10])
+                self.tanks[i].vy = float(line[11])
+                self.tanks[i].angvel = float(line[12])
+                #self.tanks.
+                
             elif line[0] == 'end':
                 break
             else:
                 self.die_confused('mytank or end', line)
-        return tanks
+            i+=1
+        return self.tanks
 
     def read_othertanks(self):
         """Get enemy tank information."""
