@@ -10,6 +10,7 @@ import time
 
 from bzrc import BZRC, Command
 from obstacle import Obstacle
+from geo import Point, Line
 
 class PFAgent(object):
     
@@ -17,46 +18,79 @@ class PFAgent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
-        self.throttle = .25
+        self.throttle = .15
         self.obstacles = []
         self.fields = Calculations()
+        self.flagIndex = self.getIndex()
+        self.base = bzrc.get_bases()[self.flagIndex]
+        
+        c1 = Point(self.base.corner1_x, self.base.corner1_y)
+        c3 = Point(self.base.corner3_x, self.base.corner3_y)
+        line = Line(c1, c3)
+        self.base = line.getMidpoint()
+        
         
         for obs in bzrc.get_obstacles():
             self.obstacles.append(Obstacle(obs))
     
-    def tick(self, time_diff):
-        print "the diff" , time_diff
-        """Some time has passed; decide what to do next."""
-        if time_diff == 0:
-            return
-        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
-        
-        ''' list of teammates with velocities and position and flag posession etc. '''
-        self.mytanks = mytanks
-        ''' positions and angle of othertanks '''
-        self.othertanks = othertanks
-        ''' flags returns list of where the falg is an who possess it. returns none if no tank is holding the flag '''
-        self.flags = flags
-        ''' visible shots '''
-        self.shots = shots
-
-        self.enemies = [tank for tank in othertanks if tank.color !=
-                        self.constants['team']]
-
-        self.commands = []
-        
-        for tank in self.mytanks:
+    def getIndex(self):
+        flags = self.bzrc.get_flags()
+        i = 0
+        for flag in flags:
+            if flag.color == self.constants['team']:              
+                return i
+            i += 1
+        return    
+    def captureFlag(self,tank,flags,flagIndex,time_diff):
+       
             totalX = 0
             totalY = 0
             '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
-          
-            
-            deltaX,deltaY = self.fields.getAttractiveField(tank, flags[3], 800, 1)
+   
+            deltaX,deltaY = self.fields.getAttractiveField(tank, flags[flagIndex], 800, 5)
           
             totalX += deltaX
             totalY += deltaY
+      
+            for obstacle in self.obstacles:
+               
+                deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle.midpoint, obstacle.distanceToCenter*1.2, obstacle.distanceToCenter)
+                #deltaX,deltaY = self.fields.getTangentialField2(tank,obstacle.midpoint, obstacle.distanceToCenter, obstacle.distanceToCenter, "CCW")
+                totalX += deltaX
+                totalY += deltaY
+                
             
+            '''can also calculate a repulsion for enemies'''
+            for enemy in self.enemies:             
+                deltaX,deltaY = self.fields.getTangentialField2(tank, enemy, 20, 1, "CW")
+                totalX += deltaX
+                totalY += deltaY
+                pass
+            '''this is calculating the angle between where you currently are and where you are trying to be updates accordingly'''
+            ''' The throttle decreases speed as you approach the object of interest, in theory
+                totalX and Y are where you want to be'''
+            theta = math.atan2(totalY, totalX)
+            theta = theta - tank.angle
+            #theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
+            #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
+            command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),theta,False)
+            self.commands.append(command)
+     
             
+            '''should we log these results?'''
+            self.bzrc.do_commands(self.commands)
+    
+   
+    def returnFlag(self,tank,flags,time_diff):
+            totalX = 0
+            totalY = 0
+            '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
+   
+            deltaX,deltaY = self.fields.getAttractiveField(tank,self.base,800,5)
+          
+            totalX += deltaX
+            totalY += deltaY
+      
             for obstacle in self.obstacles:
                
                 deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle.midpoint, obstacle.distanceToCenter*1.2, obstacle.distanceToCenter)
@@ -67,7 +101,7 @@ class PFAgent(object):
             
             '''can also calculate a repulsion for enemies'''
             for enemy in self.enemies:             
-                deltaX,deltaY = self.fields.getRepulsiveField(tank, enemy, 25, 1)
+                deltaX,deltaY = self.fields.getTangentialField2(tank, enemy, 25, 2, "CCW")
                 totalX += deltaX
                 totalY += deltaY
            
@@ -75,17 +109,83 @@ class PFAgent(object):
             ''' The throttle decreases speed as you approach the object of interest, in theory
                 totalX and Y are where you want to be'''
             theta = math.atan2(totalY, totalX)
-            # theta = theta - tank.angle
-            theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
+            theta = theta - tank.angle
+            #theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
             #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
-            command = Command(tank.index,self.throttle*abs(totalY+totalX),theta,False)
+            command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),theta,True)
             self.commands.append(command)
-     
+    
+            '''should we log these results?'''
+            self.bzrc.do_commands(self.commands)
+    
+    
+    def huntEnemies(self,tank,enemies,time_diff):
+            totalX = 0
+            totalY = 0
+            '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
+            for enemy in enemies:
+                if enemy.status == "alive":
+                    deltaX,deltaY = self.fields.getAttractiveField(tank,enemy,800,5)        
+                    totalX += deltaX
+                    totalY += deltaY
+                    break
+      
+            for obstacle in self.obstacles:
+               
+                deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle.midpoint, obstacle.distanceToCenter*1.2, obstacle.distanceToCenter)
+                #deltaX,deltaY = self.fields.getTangentialField2(tank,obstacle.midpoint, obstacle.distanceToCenter, obstacle.distanceToCenter, "CCW")
+                totalX += deltaX
+                totalY += deltaY
             
-        '''should we log these results?'''
-        results = self.bzrc.do_commands(self.commands)
+            theta = math.atan2(totalY, totalX)
+            theta = theta - tank.angle
+      
+            command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),theta,True)
+            self.commands.append(command)
+            
+           
+            self.bzrc.do_commands(self.commands)  
+            
+          
+            
+           
+    
+    def protectBase(self):
+        pass
+    
+    
+    def tick(self, time_diff):
+        
+        """Some time has passed; decide what to do next."""
+        if time_diff == 0:
+            return
+        mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
+        
+        ''' list of teammates with velocities and position and flag posession etc. '''
+        self.mytanks = mytanks
+        ''' positions and angle of othertanks '''
+        self.othertanks = othertanks
+        ''' flags returns list of where the flag is an who possess it. returns none if no tank is holding the flag '''
+        self.flags = flags
+       
+        ''' visible shots '''
+        self.shots = shots
+
+        self.enemies = [tank for tank in othertanks if tank.color !=
+                        self.constants['team']]
+
+        self.commands = []
         
         
+        for tank in mytanks:
+            if tank.flag != "-":
+                self.returnFlag(tank,flags,time_diff)
+            else:
+                if flags[3].poss_color == self.constants['team']:
+                    self.huntEnemies(tank,self.enemies,time_diff)
+                else:
+                    self.captureFlag(tank, flags, 3, time_diff)
+                        
     def shoot_em(self, tank):
         my_position = Point(tank.x, tank.y)
         
@@ -123,7 +223,7 @@ class PFAgent(object):
 class Calculations(object):
     def __init__ (self):
         self.Kp = .1
-        self.Kd = .5
+        self.Kd = .2
      
     ''' The PD controller calculations'''
     def calculateAlpha(self,current,target,oldError,elapsedTime,tank):
@@ -234,7 +334,7 @@ class Calculations(object):
     
     
     def getTangentialField2(self,tank,target,spread,radius,direction):
-        alpha = 1
+        alpha = .25
         deltax = 0
         deltay = 0
         d = self.distance(tank, target)
@@ -274,8 +374,8 @@ def main():
 
     # Connect.
     #bzrc = BZRC(host, int(port), debug=True)
-    bzrc = BZRC(host, int(port))
-    #bzrc = BZRC(host, 39491)
+    #bzrc = BZRC(host, int(port))
+    bzrc = BZRC(host, 35001)
     agent = PFAgent(bzrc)
 
     prev_time = time.time()
