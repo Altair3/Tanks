@@ -44,7 +44,7 @@ except ImportError:
 
 # Constants
 # Output file:
-FILENAME = 'myPlot.gpi'
+FILENAME = 'myPlot2.gpi'
 # Size of the world (one of the "constants" in bzflag):
 WORLDSIZE = 800
 # How many samples to take along each dimension:
@@ -53,22 +53,12 @@ SAMPLES = 50
 # like scaling by 0.75 is pretty good, but this is adjustable:
 VEC_LEN = 0.75 * WORLDSIZE / SAMPLES
 
-OBSTACLES = [((150.0, 150.0), (150.0, 90.0), (90.0, 90.0), (90.0, 150.0)),
-                ((150.0, 210.0), (150.0, 150.0), (90.0, 150.0), (90.0, 210.0)),
-                ((210.0, 150.0), (210.0, 90.0), (150.0, 90.0), (150.0, 150.0)),
-                ((150.0, -90.0), (150.0, -150.0), (90.0, -150.0), (90.0, -90.0)),
-                ((210.0, -90.0), (210.0, -150.0), (150.0, -150.0), (150.0, -90.0)),
-                ((150.0, -150.0), (150.0, -210.0), (90.0, -210.0), (90.0, -150.0)),
-                ((-90.0, -90.0), (-90.0, -150.0), (-150.0, -150.0), (-150.0, -90.0)),
-                ((-90.0, -150.0), (-90.0, -210.0), (-150.0, -210.0), (-150.0, -150.0)),
-                ((-150.0, -90.0), (-150.0, -150.0), (-210.0, -150.0), (-210.0, -90.0)),
-                ((-90.0, 150.0), (-90.0, 90.0), (-150.0, 90.0), (-150.0 ,150.0)),
-                ((-90.0, 210.0), (-90.0, 150.0), (-150.0, 150.0), (-150.0, 210.0)),
-                ((-150.0, 150.0), (-150.0, 90.0), (-210.0, 90.0), (-210.0, 150.0)),
-                ((10.0, 60.0), (10.0, -60.0), (-10.0, -60.0), (-10.0, 60.0))]
+OBSTACLES = [((100.0, 42.4264068712), (142.426406871, 0.0), (100.0, -42.4264068712), (57.5735931288, 5.19573633741e-15)),
+                ((-100.0, 42.4264068712), (-57.5735931288, 0.0), (-100.0, -42.4264068712), (-142.426406871, 5.19573633741e-15)),
+                ((2.59786816871e-15, 142.426406871), (42.4264068712, 100.0), (2.59786816871e-15, 57.5735931288), (-42.4264068712, 100.0)),
+                ((2.59786816871e-15, -57.5735931288), (42.4264068712, -100.0), (2.59786816871e-15, -142.426406871), (-42.4264068712, -100.0))]
                 
-MIDPOINTS = [(120.0, 120.0), (120.0, 180.0), (180.0, 120.0), (120.0, -120.0), (180.0, -120.0), (120.0, -180.0), (-120.0, -120.0), (-120.0, -180.0), (-180.0, -120.0), (-120.0, 120.0), (-120.0, 180.0), (-180.0, 120.0), (0.0, 0.0)]
-
+MIDPOINTS = [(100.0, 0.0),(-100.0, 0.0),(2.59786816871e-15, 99.9999999999),(2.59786816871e-15, -99.9999999999)]
 
 def gpi_point(x, y, vec_x, vec_y):
     '''Create the centered gpi data point (4-tuple) for a position and
@@ -129,21 +119,13 @@ def getTotalDeltaXY(x, y):
     totalDeltaY += deltaY
     
     #the "L"s
-    for i in range(12):
+    for i in range(4):
         ox, oy = MIDPOINTS[i]
         obstacle = Blank(ox, oy)
         #deltaX, deltaY = calc.getTangentialField2(tank,obstacle, 42, 42, "CCW")
         deltaX, deltaY = calc.getRepulsiveField(tank,obstacle, 42*1.2, 42)
         totalDeltaX += deltaX
         totalDeltaY += deltaY
-        
-    #the obstacle in the middle
-    ox, oy = MIDPOINTS[12]
-    obstacle = Blank(ox, oy)
-    #deltaX, deltaY = calc.getTangentialField2(tank,obstacle, 60, 60, "CCW")
-    deltaX, deltaY = calc.getRepulsiveField(tank,obstacle, 60*1.2, 60)
-    totalDeltaX += deltaX
-    totalDeltaY += deltaY
     
     return totalDeltaX, totalDeltaY
     
@@ -177,4 +159,3 @@ outfile = open(FILENAME, 'w')
 print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
 print >>outfile, draw_obstacles(OBSTACLES)
 print >>outfile, plot_field()
-
