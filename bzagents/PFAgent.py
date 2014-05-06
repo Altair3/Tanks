@@ -185,19 +185,21 @@ class PFAgent(object):
         for enemy in self.enemies:
             enemy_position = Point(enemy.x, enemy.y)
             
-            if my_position.distance(enemy_position) <= 10:
+            if my_position.distance(enemy_position) <= 50:
                 deltaX, deltaY = my_position.getDeltaXY(enemy_position)
                 theta = math.atan2(deltaY, deltaX)
                 theta = theta - tank.angle
                 
-                if theta < .3 and theta > -.3:
+                if theta < 3 and theta > -3:
                     line_to_enemy = Line(my_position, enemy_position)
                     
                     safe = True
                     for teamMate in self.mytanks:
                         teamMate_position = Point(teamMate.x, teamMate.y)
+                        cp2 = teamMate_position.closestPointOnLine(line_to_enemy)
+                        teamMate_enemy_line = Line(teamMate_position, cp2)
                         
-                        if teamMate_position.distanceToLine(line_to_enemy) < 10:
+                        if teamMate_position.distance(cp2) < 10 and teamMate_enemy_line.isPerpendicular(line_to_enemy):
                             safe = False
                             break
                     

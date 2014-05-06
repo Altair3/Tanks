@@ -22,7 +22,7 @@ class Point(object):
         
         lineLengthSquared = lineP1.distance(lineP2)
         if lineLengthSquared == 0.0:
-            return self.distance(lineP1)
+            return lineP1
         
         tx = (self.x-lineP1.x)*(lineP2.x-lineP1.x)+(self.y-lineP1.y)*(lineP2.y-lineP1.y)
         tx = tx/((lineP2.x-lineP1.x)**2 + (lineP2.y-lineP1.y)**2)
