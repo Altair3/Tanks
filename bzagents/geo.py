@@ -9,6 +9,11 @@ class Point(object):
     def distance(self, p2):
         distance = math.sqrt((self.x-p2.x)**2 + (self.y-p2.y)**2)
         return distance
+        
+    def getDeltaXY(self, p2):
+        dx = self.x - p2.x
+        dy = self.y - p2.y
+        return dx, dy
     
 	#returns the closest point on the line segment formed by lineP1-lineP2 to the calling point
     def closestPointOnLine(self, line):
@@ -29,6 +34,10 @@ class Point(object):
         else:
             pointOnLine = Point(lineP1.x + tx * (lineP2.x - lineP1.x), lineP1.y + tx * (lineP2.y - lineP1.y))
             return pointOnLine
+            
+    def distanceToLine(self, line):
+        closestPoint = self.closestPointOnLine(line)
+        return self.distance(closestPoint)
         
 class Line(object):
     def __init__(self, p1, p2):

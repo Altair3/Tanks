@@ -84,6 +84,34 @@ class PFAgent(object):
             
         '''should we log these results?'''
         results = self.bzrc.do_commands(self.commands)
+        
+        
+    def shoot_em(self, tank):
+        my_position = Point(tank.x, tank.y)
+        
+        for enemy in self.othertanks:
+            enemy_position = Point(enemy.x, enemy.y)
+            
+            if my_position.distance(enemy_position) <= self.constants["shotrange"]:
+                deltaX, deltaY = my_position.getDeltaXY(enemy_position)
+                theta = math.atan2(deltaY, deltaX)
+                theta = theta - tank.angle
+                
+                if theta < .1 and theta > -.1:
+                    line_to_enemy = Line(my_position, enemy_position)
+                    
+                    safe = True
+                    for teamMate in self.mytanks:
+                        teamMate_position = Point(teamMate.x, teamMate.y)
+                        
+                        if teamMate_position.distanceToLine(line_to_enemy) > 10:
+                            safe = False
+                            break
+                    
+                    if safe == True:
+                        return True
+                        
+        return False
 
     
 """ A class to perform the potential field and controller calculations
