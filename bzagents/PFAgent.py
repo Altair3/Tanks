@@ -6,6 +6,7 @@ Created on May 1, 2014
 
 import sys
 import math
+import random
 import time
 
 from bzrc import BZRC, Command
@@ -14,7 +15,7 @@ from geo import Point, Line
 
 class PFAgent(object):
     
-    def __init__(self, bzrc):
+    def __init__(self, bzrc, enemy):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.commands = []
@@ -23,7 +24,7 @@ class PFAgent(object):
         self.fields = Calculations()
         self.flagIndex = self.getIndex()
         self.base = bzrc.get_bases()[self.flagIndex]
-        
+        self.enemyFlag = int(enemy)
         c1 = Point(self.base.corner1_x, self.base.corner1_y)
         c3 = Point(self.base.corner3_x, self.base.corner3_y)
         line = Line(c1, c3)
@@ -47,16 +48,16 @@ class PFAgent(object):
         totalY = 0
         for obstacle in self.obstacles:
             #deltaX,deltaY = self.fields.getRepulsiveField(tank,obstacle.midpoint, obstacle.distanceToCenter*1.2, obstacle.distanceToCenter)
-            deltaX,deltaY = self.fields.getTangentialField2(tank,obstacle.midpoint, obstacle.distanceToCenter, obstacle.distanceToCenter, "CCW")
+            deltaX,deltaY = self.fields.getTangentialField2(tank,obstacle.midpoint, obstacle.distanceToCenter*1.175, obstacle.distanceToCenter, "CCW")
             totalX += .3*deltaX
             totalY += .3*deltaY
         return totalX,totalY
     
     def getEnemyFields(self,tank):
         totalX=0
-        totalY = 0
+        totalY=0
         for enemy in self.enemies:             
-            deltaX,deltaY = self.fields.getTangentialField2(tank, enemy, 20, 2, "CCW")
+            deltaX,deltaY = self.fields.getTangentialField2(tank, enemy, 20, 1, "CW")
             totalX += deltaX
             totalY += deltaY
             
@@ -76,12 +77,13 @@ class PFAgent(object):
             totalX += x
             totalY += y            
             x,y = self.getEnemyFields(tank)
-            totalX += x
-            totalY += y
+            totalX += (x)
+            totalY += (y)
             
             theta = math.atan2(totalY, totalX)
-            theta = theta - tank.angle
-            #theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
+       
+     
+            #theta = self.fields.calculateAlpha(tank.angle, theta, .01, time_diff,tank)
             #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
             self.sendCommand(totalY, totalX, tank, theta)
     
@@ -100,14 +102,14 @@ class PFAgent(object):
             totalX += x
             totalY += y   
             x,y = self.getEnemyFields(tank)
-            totalX += x
-            totalY += y
+            totalX += (x)
+            totalY += (y)
            
             '''this is calculating the angle between where you currently are and where you are trying to be updates accordingly'''
             ''' The throttle decreases speed as you approach the object of interest, in theory
                 totalX and Y are where you want to be'''
             theta = math.atan2(totalY, totalX)
-            theta = theta - tank.angle
+            
             #theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
             #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
             self.sendCommand(totalY, totalX, tank, theta)
@@ -118,20 +120,18 @@ class PFAgent(object):
             totalX = 0
             totalY = 0
             '''could add code here  Need to go and get the flag, and if you have it come back. also avoid enemies and obstacles etc.'''
-            for enemy in enemies:
-                if enemy.status == "alive":
-                    deltaX,deltaY = self.fields.getAttractiveField(tank,enemy,800,5)        
-                    totalX += deltaX
-                    totalY += deltaY
-                    break
-      
-            
+           
+                
+            deltaX,deltaY = self.fields.getAttractiveField(tank,enemies[random.randrange(0,15)],800,5)        
+            totalX += deltaX
+            totalY += deltaY
+  
             x,y = self.getObstacleFields(tank)
             totalX += x
             totalY += y   
             
             theta = math.atan2(totalY, totalX)
-            theta = theta - tank.angle
+          
             self.sendCommand(totalY, totalX, tank, theta)
            
     
@@ -140,6 +140,14 @@ class PFAgent(object):
     
     def sendCommand(self,totalY,totalX,tank,theta):
         shoot = self.shoot_em(tank)
+        theta = theta - tank.angle
+        '''if totalY > 0:
+            if theta - tank.angle <= theta:
+                theta = theta - tank.angle
+        else:
+           theta = tank.angle - theta
+        if totalY < 0:
+            if theta '''
         command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)  
@@ -171,10 +179,10 @@ class PFAgent(object):
             if tank.flag != "-":
                 self.returnFlag(tank,flags,time_diff)
             else:
-                if flags[2].poss_color == self.constants['team']:
+                if flags[self.enemyFlag].poss_color == self.constants['team']:
                     self.huntEnemies(tank,self.enemies,time_diff)
                 else:
-                    self.captureFlag(tank, flags, 2, time_diff)
+                    self.captureFlag(tank, flags, self.enemyFlag, time_diff)
      
      
      
@@ -186,20 +194,22 @@ class PFAgent(object):
             enemy_position = Point(enemy.x, enemy.y)
             
             if my_position.distance(enemy_position) <= 50:
-                deltaX, deltaY = my_position.getDeltaXY(enemy_position)
-                theta = math.atan2(deltaY, deltaX)
-                theta = theta - tank.angle
+                theta = self.fields.angle(tank,enemy)
                 
-                if theta < 3 and theta > -3:
+                
+                if theta < 1.5 and theta > -1.5:
                     line_to_enemy = Line(my_position, enemy_position)
                     
                     safe = True
                     for teamMate in self.mytanks:
+                        if teamMate.index == tank.index:
+                            continue
+                        
                         teamMate_position = Point(teamMate.x, teamMate.y)
                         cp2 = teamMate_position.closestPointOnLine(line_to_enemy)
                         teamMate_enemy_line = Line(teamMate_position, cp2)
                         
-                        if teamMate_position.distance(cp2) < 10 and teamMate_enemy_line.isPerpendicular(line_to_enemy):
+                        if teamMate_position.distance(cp2) < 10:
                             safe = False
                             break
                     
@@ -225,12 +235,7 @@ class Calculations(object):
         # y(t) - x(t) is error
         error = (target) - (current)
         alpha = self.Kp*error
-        derivative = error - oldError
-        dt = elapsedTime
-        derivative /= dt 
-        alpha += self.Kd*derivative
-        #update the error on the tank
-        tank.oldError = error
+    
         return alpha # return alpha here when it works
     
     def distance(self, tank,target):
@@ -359,7 +364,7 @@ class Calculations(object):
 def main():
     # Process CLI arguments.
     try:
-        execname, host, port = sys.argv
+        execname, host, port, enemy = sys.argv
     except ValueError:
         execname = sys.argv[0]
         print >>sys.stderr, '%s: incorrect number of arguments' % execname
@@ -370,7 +375,7 @@ def main():
     #bzrc = BZRC(host, int(port), debug=True)
     bzrc = BZRC(host, int(port))
     #bzrc = BZRC(host, 35001)
-    agent = PFAgent(bzrc)
+    agent = PFAgent(bzrc,enemy)
 
     prev_time = time.time()
 
