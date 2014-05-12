@@ -79,13 +79,8 @@ class PFAgent(object):
             x,y = self.getEnemyFields(tank)
             totalX += (x)
             totalY += (y)
-            
-            theta = math.atan2(totalY, totalX)
-       
-     
-            #theta = self.fields.calculateAlpha(tank.angle, theta, .01, time_diff,tank)
-            #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
-            self.sendCommand(totalY, totalX, tank, theta)
+
+            self.sendCommand(totalY, totalX, tank)
     
    
     def returnFlag(self,tank,flags,time_diff):
@@ -108,11 +103,9 @@ class PFAgent(object):
             '''this is calculating the angle between where you currently are and where you are trying to be updates accordingly'''
             ''' The throttle decreases speed as you approach the object of interest, in theory
                 totalX and Y are where you want to be'''
-            theta = math.atan2(totalY, totalX)
-            
-            #theta = self.fields.calculateAlpha(tank.angle, theta, 0, time_diff,tank)
-            #accel = self.fields.calculateAlpha(current, target, 0, time_diff, tank)
-            self.sendCommand(totalY, totalX, tank, theta)
+         
+
+            self.sendCommand(totalY, totalX, tank)
 
     
     
@@ -130,25 +123,31 @@ class PFAgent(object):
             totalX += x
             totalY += y   
             
-            theta = math.atan2(totalY, totalX)
+            
           
-            self.sendCommand(totalY, totalX, tank, theta)
+            self.sendCommand(totalY, totalX, tank)
            
     
     def protectBase(self):
         pass
     
-    def sendCommand(self,totalY,totalX,tank,theta):
+    def normalize_angle(self, angle):
+        """Make any angle be between +/- pi."""
+        angle -= 2 * math.pi * int (angle / (2 * math.pi))
+        if angle <= -math.pi:
+            angle += 2 * math.pi
+        elif angle > math.pi:
+            angle -= 2 * math.pi
+        return angle
+        
+    def sendCommand(self,totalY,totalX,tank):
         shoot = self.shoot_em(tank)
-        theta = theta - tank.angle
-        '''if totalY > 0:
-            if theta - tank.angle <= theta:
-                theta = theta - tank.angle
-        else:
-           theta = tank.angle - theta
-        if totalY < 0:
-            if theta '''
-        command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),theta,shoot)
+     
+        theta = math.atan2(totalY,totalX)
+        theta = self.normalize_angle(theta-tank.angle)
+        
+
+        command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),.85*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)  
         
