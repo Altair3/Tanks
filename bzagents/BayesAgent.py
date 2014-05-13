@@ -3,21 +3,20 @@ import math
 import random
 import time
 import numpy as np
-import Visualizer
+import Visualizer as vs
 from bzrc import BZRC, Command
 
 class BayesAgent(object):
     
-    def __init__(self):
+    def __init__(self, bzrc):
         
       
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
-        init_window(800,800)
-        update_grid(self.grid)
-        draw_grid()
+        vs.init_window(800,800)
+        self.grid.draw()
         
-    
+		
     def tick(time_diff):
         pass
         
@@ -49,7 +48,11 @@ class OccGrid(object):
         
     def convert(self, x, y):
         return (self.yMax-y), (x+self.xMax)
-        
+    
+    def draw(self):
+		vs.update_grid(self.grid)
+		vs.draw_grid()
+		  
     '''
     x: the x coordinate
     y: the y coordinate
@@ -91,24 +94,23 @@ def main():
         sys.exit(-1)
 
     # Connect.
-    #bzrc = BZRC(host, int(port))
-    #agent = BayesAgent(bzrc)
+    bzrc = BZRC(host, int(port))
+    agent = BayesAgent(bzrc)
     
-    #prev_time = time.time()
+    prev_time = time.time()
 
     # Run the agent
     
-    '''
+    
     try:
         while True:
             time_diff = time.time() - prev_time
             prev_time = time.time()
-            agent.tick(time_diff)
+            agent.tick()
             
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
-    '''
     
     '''
     Grid test stuff

@@ -37,7 +37,7 @@ def init_window(width, height):
     glLoadIdentity()
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    glutMainLoop()
+    #glutMainLoop()
 
 
 
