@@ -14,6 +14,7 @@ class BayesAgent(object):
         self.bzrc = bzrc
         self.constants = self.bzrc.get_constants()
         self.truePositive = self.constants['truepositive']
+        self.falseNegative = 1 - self.truePositive
         self.trueNegative = self.constants['truenegative']
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
@@ -33,6 +34,7 @@ class BayesAgent(object):
     def getObservation(self, tank):
         pos, size, grid = self.bzrc.get_occgrid(tank)
         self.updateGrid(pos, size, grid)
+        self.grid.draw()
         
     '''
     observation: the object returned by bzrc
@@ -117,7 +119,7 @@ class OccGrid(object):
 def main():
     # Process CLI arguments.
     try:
-        execname, host, port, enemy = sys.argv
+        execname, host, port  = sys.argv
     except ValueError:
         execname = sys.argv[0]
         print >>sys.stderr, '%s: incorrect number of arguments' % execname
