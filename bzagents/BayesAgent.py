@@ -4,13 +4,17 @@ import random
 import time
 import numpy as np
 import Visualizer as vs
+import Calculations as fields
 from bzrc import BZRC, Command
 
 class BayesAgent(object):
     
     def __init__(self, bzrc):
         
-      
+        self.bzrc = bzrc
+        self.constants = self.bzrc.get_constants()
+        self.truePositive = self.constants['truepositive']
+        self.trueNegative = self.constants['truenegative']
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         vs.init_window(800,800)
@@ -48,7 +52,9 @@ class OccGrid(object):
         
     def convert(self, x, y):
         return (self.yMax-y), (x+self.xMax)
-    
+    '''
+    calls the update in the OpenGl lib
+    '''
     def draw(self):
 		vs.update_grid(self.grid)
 		vs.draw_grid()
