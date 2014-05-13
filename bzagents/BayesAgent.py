@@ -2,6 +2,7 @@ import sys
 import math
 import random
 import time
+import numpy as np
 
 from bzrc import BZRC, Command
 
@@ -10,7 +11,8 @@ class BayesAgent(object):
     def __init__(self):
         
         listOfLocations = []
-        self.grid = OccGrid(800, 800, .07125)
+        self.grid = OccGrid(800, 800, .07125) 
+        #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         
         pass
     
@@ -40,7 +42,8 @@ class OccGrid(object):
         
         self.prior = prior
         
-        self.grid = [[prior for x in range(self.sizeX)] for x in range(self.sizeY)]
+        self.grid = np.zeros([self.sizeX, self.sizeY])
+        self.grid.fill(self.prior)
         
     def convert(self, x, y):
         return (self.yMax-y), (x+self.xMax)
@@ -48,10 +51,11 @@ class OccGrid(object):
     '''
     x: the x coordinate
     y: the y coordinate
+    return: the value at [x,y]
     '''
     def get(self, x, y):
         xIndex, yIndex = self.convert(x, y)
-        return self.grid[xIndex][yIndex]
+        return self.grid[xIndex, yIndex]
     
     '''
     x: the x coordinate
@@ -60,7 +64,7 @@ class OccGrid(object):
     '''    
     def set(self, x, y, value):
         xIndex, yIndex = self.convert(x, y)
-        self.grid[xIndex][yIndex] = value
+        self.grid[xIndex, yIndex] = value
         
     '''
     creates a string representation of the grid
@@ -85,13 +89,14 @@ def main():
         sys.exit(-1)
 
     # Connect.
-    bzrc = BZRC(host, int(port))
-    agent = BayesAgent(bzrc)
+    #bzrc = BZRC(host, int(port))
+    #agent = BayesAgent(bzrc)
     
-    prev_time = time.time()
+    #prev_time = time.time()
 
     # Run the agent
     
+    '''
     try:
         while True:
             time_diff = time.time() - prev_time
@@ -101,6 +106,23 @@ def main():
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
+    '''
+    
+    '''
+    Grid test stuff
+    grid = OccGrid(10,10,2)
+    
+    grid.set(-5,5, 1)
+    grid.set(0,5, 1)
+    grid.set(5,5, 1)
+    grid.set(-5,0, 1)
+    grid.set(0,0, 1)
+    grid.set(5,0, 1)
+    grid.set(-5,-5, 1)
+    grid.set(0,-5, 1)
+    grid.set(5,-5, 1)
+    
+    print grid.toString()
     '''
 
 
