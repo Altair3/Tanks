@@ -19,9 +19,12 @@ class BayesAgent(object):
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         
-        vs.init_window(800,800)
+        self.mytanks = bzrc.get_mytanks()
         
-        self.getObservation(0)
+        for tank in self.mytanks:
+            self.getObservation(tank)
+        
+        vs.init_window(800,800)
         self.grid.draw()
         
 		
@@ -32,7 +35,7 @@ class BayesAgent(object):
         #update table
         
     def getObservation(self, tank):
-        pos, size, grid = self.bzrc.get_occgrid(tank)
+        pos, size, grid = self.bzrc.get_occgrid(tank.index)
         self.updateGrid(pos, size, grid)
         self.grid.draw()
         
@@ -48,7 +51,12 @@ class BayesAgent(object):
         
         for i in obsGrid:
             for j in i:
-                self.grid.set(curX,curY, j) #just put the observation in for now, change later
+                
+                curValue = self.grid.get(curX, curY)
+                obsValue = j
+                
+                self.grid.set(curX,curY, obsValue)
+                
                 curY += 1
             curX += 1
             curY = yPos
@@ -117,6 +125,7 @@ class OccGrid(object):
         return rval
 
 def main():
+    
     # Process CLI arguments.
     try:
         execname, host, port  = sys.argv
@@ -146,18 +155,10 @@ def main():
         bzrc.close()
     
     '''
-    Grid test stuff
-    grid = OccGrid(10,10,2)
+    #Grid test stuff
+    grid = OccGrid(10,10,0)
     
-    grid.set(-5,5, 1)
     grid.set(0,5, 1)
-    grid.set(5,5, 1)
-    grid.set(-5,0, 1)
-    grid.set(0,0, 1)
-    grid.set(5,0, 1)
-    grid.set(-5,-5, 1)
-    grid.set(0,-5, 1)
-    grid.set(5,-5, 1)
     
     print grid.toString()
     '''
