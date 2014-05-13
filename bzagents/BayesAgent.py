@@ -17,6 +17,7 @@ class BayesAgent(object):
         self.trueNegative = self.constants['truenegative']
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
+        
         vs.init_window(800,800)
         
         self.getObservation(0)
@@ -30,7 +31,7 @@ class BayesAgent(object):
         #update table
         
     def getObservation(self, tank):
-        pos, size, grid = self.bzrc.get_occgrid(tank.index)
+        pos, size, grid = self.bzrc.get_occgrid(tank)
         self.updateGrid(pos, size, grid)
         
     '''
@@ -45,7 +46,7 @@ class BayesAgent(object):
         
         for i in obsGrid:
             for j in i:
-                self.grid[curX,curY] = j #just put the observation in for now, change later
+                self.grid.set(curX,curY, j) #just put the observation in for now, change later
                 curY += 1
             curX += 1
             curY = yPos
