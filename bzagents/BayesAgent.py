@@ -3,18 +3,20 @@ import math
 import random
 import time
 import numpy as np
-
+import Visualizer
 from bzrc import BZRC, Command
 
 class BayesAgent(object):
     
     def __init__(self):
         
-        listOfLocations = []
+      
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
+        init_window(800,800)
+        update_grid(self.grid)
+        draw_grid()
         
-        pass
     
     def tick(time_diff):
         pass
