@@ -5,6 +5,7 @@ import time
 import numpy as np
 import Visualizer as vs
 import Calculations as fields
+from geo import Point, Line
 from bzrc import BZRC, Command
 
 class BayesAgent(object):
@@ -12,32 +13,67 @@ class BayesAgent(object):
     def __init__(self, bzrc):
         
         self.bzrc = bzrc
+        self.mytanks = bzrc.get_mytanks()
+        self.fields = fields.Calculations()
+        self.throttle = .15
+        self.commands = []
         self.constants = self.bzrc.get_constants()
-        self.truePositive = self.constants['truepositive']
-        self.falseNegative = 1 - self.truePositive
-        self.trueNegative = self.constants['truenegative']
+        self.truePositive = float(self.constants['truepositive'])
+        self.falseNegative = 1.0 - float(self.truePositive)
+        self.trueNegative = float(self.constants['truenegative'])
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         
-        self.mytanks = bzrc.get_mytanks()
-        
-        for tank in self.mytanks:
-            self.getObservation(tank)
-        
         vs.init_window(800,800)
         self.grid.draw()
-        
 		
-    def tick(self):
-        pass
-        
-        #take observations
-        #update table
+    def tick(self, prev_time):
+        for tank in self.mytanks:
+            #target = Point(0.0, -760.0)
+            #self.goToPoint(tank, target)
+            
+            
+            if (time.time() - prev_time) < 20:
+                self.bzrc.speed(tank.index, .5)
+            else:
+                self.bzrc.speed(tank.index, 0)
+            
+            self.getObservation(tank)
         
     def getObservation(self, tank):
         pos, size, grid = self.bzrc.get_occgrid(tank.index)
         self.updateGrid(pos, size, grid)
         self.grid.draw()
+        
+    def goToPoint(self,tank,target):
+        totalX = 0
+        totalY = 0
+
+        deltaX,deltaY = self.fields.getAttractiveField(tank, target, 800, 5)
+   
+        totalX += deltaX
+        totalY += deltaY
+        
+        self.sendCommand(totalY, totalX, tank)
+        
+    def normalize_angle(self, angle):
+        """Make any angle be between +/- pi."""
+        angle -= 2 * math.pi * int (angle / (2 * math.pi))
+        if angle <= -math.pi:
+            angle += 2 * math.pi
+        elif angle > math.pi:
+            angle -= 2 * math.pi
+        return angle
+        
+    def sendCommand(self,totalY,totalX,tank):
+        shoot = False#self.shoot_em(tank)
+     
+        theta = math.atan2(totalY,totalX)
+        theta = self.normalize_angle(theta-tank.angle)
+
+        command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),.85*theta,shoot)
+        self.commands.append(command)
+        self.bzrc.do_commands(self.commands)
         
     '''
     observation: the object returned by bzrc
@@ -54,8 +90,42 @@ class BayesAgent(object):
                 
                 curValue = self.grid.get(curX, curY)
                 obsValue = j
+                '''
+                observe oi,j from the set {hit, miss, no_data}
+                update p(si,j = occupied | oi,j) = p(oi,j | si,j = occupied)p(si,j = occupied) / p(oi,j)
                 
-                self.grid.set(curX,curY, obsValue)
+                p(oi,j = hit | si,j = hit)*p(si,j = hit)/p(oi,j = hit)
+                probability that the observation returns occupied for cell i,j given the cell i,j is occupied (self.truePositive)
+                * probability that the cell i,j is truly  occupied (.07125)
+                / probability that the observation returns occupied for the cell i,j (needs to get smaller as more hits are observed,
+                                                                                      needs to get the answer to converge to around .97)
+                    things that p(oi,j = hit) is not:
+                        current value of the cell
+                        
+                        
+                        
+                        
+                
+                p(oi,j = miss | si,j = hit)*p(si,j = hit)/p(oi,j = hit)
+                probablilty that the observation returns unoccupied for cell i,j given the cell i,j is occupied (self.falseNegative)
+                * probability that the cell i,j is is truly occupied (.07125)
+                / probability that the observation returns unoccupied for cell i,j (needs to get bigger as more misses are observed,
+                                                                                    needs to get the answer to converge to around .07125)
+                '''
+                
+                
+                #works but probably is not the correct way to do this
+                if obsValue == 1:
+                    newP = self.grid.get(curX,curY) + (self.truePositive*.07125)
+                    if newP > 1:
+                        newP = 1
+                else:
+                    newP = self.grid.get(curX,curY) - (self.trueNegative*.07125)
+                    if newP < 0:
+                        newP = 0
+                
+                
+                self.grid.set(curX,curY, newP)
                 
                 curY += 1
             curX += 1
@@ -83,7 +153,7 @@ class OccGrid(object):
         self.prior = prior
         
         self.grid = np.zeros([self.sizeX, self.sizeY])
-        self.grid.fill(self.prior)
+        self.grid.fill(prior)
         
     def convert(self, x, y):
         return (self.yMax-y), (x+self.xMax)
@@ -142,13 +212,9 @@ def main():
     prev_time = time.time()
 
     # Run the agent
-    
-    
     try:
         while True:
-            time_diff = time.time() - prev_time
-            prev_time = time.time()
-            agent.tick()
+            agent.tick(prev_time)
             
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."

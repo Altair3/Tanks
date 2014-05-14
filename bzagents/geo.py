@@ -11,8 +11,8 @@ class Point(object):
         return distance
         
     def getDeltaXY(self, p2):
-        dx = self.x - p2.x
-        dy = self.y - p2.y
+        dx = p2.x - self.x
+        dy = p2.y - self.y
         return dx, dy
     
 	#returns the closest point on the line segment formed by lineP1-lineP2 to the calling point

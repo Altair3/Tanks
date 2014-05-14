@@ -1,3 +1,4 @@
+import math
     
 class Calculations(object):
     def __init__ (self):
