@@ -13,7 +13,6 @@ class BayesAgent(object):
     def __init__(self, bzrc):
         
         self.bzrc = bzrc
-        self.mytanks = bzrc.get_mytanks()
         self.fields = fields.Calculations()
         self.throttle = .15
         self.commands = []
@@ -22,22 +21,19 @@ class BayesAgent(object):
         self.falseNegative = 1.0 - float(self.truePositive)
         self.trueNegative = float(self.constants['truenegative'])
         self.falsePositive = 1.0 - self.trueNegative
-        self.grid = OccGrid(800, 800, .07125) 
+        self.grid = OccGrid(800, 800, .07125)
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         
         vs.init_window(800,800)
         self.grid.draw()
 		
     def tick(self, prev_time):
+        
+        self.commands = []
+        self.mytanks = self.bzrc.get_mytanks()
         for tank in self.mytanks:
-            #target = Point(0.0, -760.0)
-            #self.goToPoint(tank, target)
-            
-            
-            if (time.time() - prev_time) < 20:
-                self.bzrc.speed(tank.index, .5)
-            else:
-                self.bzrc.speed(tank.index, 0)
+            target = Point(0.0, 0.0)
+            self.goToPoint(tank, target)
             
             self.getObservation(tank)
         
@@ -51,6 +47,7 @@ class BayesAgent(object):
         totalY = 0
 
         deltaX,deltaY = self.fields.getAttractiveField(tank, target, 800, 5)
+      
    
         totalX += deltaX
         totalY += deltaY
@@ -67,7 +64,7 @@ class BayesAgent(object):
         return angle
         
     def sendCommand(self,totalY,totalX,tank):
-        shoot = False#self.shoot_em(tank)
+        shoot = False
      
         theta = math.atan2(totalY,totalX)
         theta = self.normalize_angle(theta-tank.angle)
@@ -75,6 +72,7 @@ class BayesAgent(object):
         command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),.85*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
+      
         
     '''
     observation: the object returned by bzrc
@@ -91,46 +89,11 @@ class BayesAgent(object):
                 
                 curValue = self.grid.get(curX, curY)
                 obsValue = j
-                '''
-                observe oi,j from the set {hit, miss, no_data}
-                update p(si,j = occupied | oi,j) = p(oi,j | si,j = occupied)p(si,j = occupied) / p(oi,j)
-                
-                p(oi,j = hit | si,j = hit)*p(si,j = hit)/p(oi,j = hit)
-                probability that the observation returns occupied for cell i,j given the cell i,j is occupied (self.truePositive)
-                * probability that the cell i,j is truly  occupied (.07125?, takes into account the previous observations?)
-                / probability that the observation returns occupied for the cell i,j (needs to get smaller as more hits are observed,
-                                                                                      needs to get the answer to converge to around .97)
-                    things that p(oi,j = hit) is not:
-                        current value of the cell
-                        
-                        
-                        
-                        
-                
-                p(oi,j = miss | si,j = hit)*p(si,j = hit)/p(oi,j = hit)
-                probablilty that the observation returns unoccupied for cell i,j given the cell i,j is occupied (self.falseNegative)
-                * probability that the cell i,j is is truly occupied (.07125)
-                / probability that the observation returns unoccupied for cell i,j (needs to get bigger as more misses are observed,
-                                                                                    needs to get the answer to converge to around .07125)
-                '''
-                
-                '''
-                #works but probably is not the correct way to do this
-                if obsValue == 1:
-                    newP = self.grid.get(curX,curY) + (self.truePositive*.07125)
-                    if newP > 1:
-                        newP = 1
-                else:
-                    newP = self.grid.get(curX,curY) - (self.trueNegative*.07125)
-                    if newP < 0:
-                        newP = 0
-                '''
-                
                 
                 if obsValue == 1:
-                    newP = self.truePositive*self.grid.get(curX,curY)/(self.falsePositive+self.truePositive*.07125)
+                    newP = self.truePositive*curValue/(self.truePositive*curValue+self.falsePositive*(1-curValue))
                 else:
-                    newP = self.trueNegative*self.grid.get(curX,curY)/(self.falseNegative+self.trueNegative*(1-.07125))
+                    newP = self.falsePositive*curValue/(self.falsePositive*curValue+self.trueNegative*(1-curValue))
                 
                 self.grid.set(curX,curY, newP)
                 
