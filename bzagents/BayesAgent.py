@@ -21,6 +21,7 @@ class BayesAgent(object):
         self.truePositive = float(self.constants['truepositive'])
         self.falseNegative = 1.0 - float(self.truePositive)
         self.trueNegative = float(self.constants['truenegative'])
+        self.falsePositive = 1.0 - self.trueNegative
         self.grid = OccGrid(800, 800, .07125) 
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         
@@ -96,7 +97,7 @@ class BayesAgent(object):
                 
                 p(oi,j = hit | si,j = hit)*p(si,j = hit)/p(oi,j = hit)
                 probability that the observation returns occupied for cell i,j given the cell i,j is occupied (self.truePositive)
-                * probability that the cell i,j is truly  occupied (.07125)
+                * probability that the cell i,j is truly  occupied (.07125?, takes into account the previous observations?)
                 / probability that the observation returns occupied for the cell i,j (needs to get smaller as more hits are observed,
                                                                                       needs to get the answer to converge to around .97)
                     things that p(oi,j = hit) is not:
@@ -113,7 +114,7 @@ class BayesAgent(object):
                                                                                     needs to get the answer to converge to around .07125)
                 '''
                 
-                
+                '''
                 #works but probably is not the correct way to do this
                 if obsValue == 1:
                     newP = self.grid.get(curX,curY) + (self.truePositive*.07125)
@@ -123,7 +124,13 @@ class BayesAgent(object):
                     newP = self.grid.get(curX,curY) - (self.trueNegative*.07125)
                     if newP < 0:
                         newP = 0
+                '''
                 
+                
+                if obsValue == 1:
+                    newP = self.truePositive*self.grid.get(curX,curY)/(self.falsePositive+self.truePositive*.07125)
+                else:
+                    newP = self.trueNegative*self.grid.get(curX,curY)/(self.falseNegative+self.trueNegative*(1-.07125))
                 
                 self.grid.set(curX,curY, newP)
                 
