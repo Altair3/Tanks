@@ -23,21 +23,37 @@ class BayesAgent(object):
         self.falsePositive = 1.0 - self.trueNegative
         self.grid = OccGrid(800, 800, .07125)
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
-        
+        self.time = time.time()
         vs.init_window(800,800)
         self.grid.draw()
 		
-    def tick(self, prev_time):
+    def tick(self):
         
+        curtime = time.time()
         self.commands = []
         self.mytanks = self.bzrc.get_mytanks()
+    
+        
         for tank in self.mytanks:
-            target = Point(0.0, 0.0)
+            target = Point(random.randrange(-400,400), random.randrange(-400,400))
+            print target.x, target.y
             self.goToPoint(tank, target)
             
-            self.getObservation(tank)
+       
+        if(curtime - self.time > 4.25 ):
+            
+            for tank in self.mytanks:
+                command = Command(tank.index,0,0,False)
+                self.commands.append(command)
+                self.bzrc.do_commands(self.commands)
+                for i in range (5):
+                    self.getObservation(tank)
+            self.time = time.time()   
+		
+            
         
     def getObservation(self, tank):
+        
         pos, size, grid = self.bzrc.get_occgrid(tank.index)
         self.updateGrid(pos, size, grid)
         self.grid.draw()
@@ -179,13 +195,13 @@ def main():
     bzrc = BZRC(host, int(port))
     agent = BayesAgent(bzrc)
     
-    prev_time = time.time()
+    prev_time = 0
 
     # Run the agent
     try:
         while True:
-            agent.tick(prev_time)
-            
+            agent.tick()
+           
     except KeyboardInterrupt:
         print "Exiting due to keyboard interrupt."
         bzrc.close()
