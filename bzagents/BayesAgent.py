@@ -7,7 +7,6 @@ import Visualizer as vs
 import Calculations as fields
 from geo import Point, Line
 from bzrc import BZRC, Command
-from LocationList import LocationList
 
 class BayesAgent(object):
     
@@ -48,7 +47,7 @@ class BayesAgent(object):
             if curLocation.distance(target) < 10:
                 target = self.getRandomCoordinate(tank.index)
                 
-                while self.grid.get(target.x, target.y) > .8:
+                while self.grid.get(target.x, target.y) > .95:
                     target = self.getRandomCoordinate(tank.index)
                 
                 self.locationList[tank.index] = target
@@ -144,11 +143,28 @@ class BayesAgent(object):
                 
                 curValue = self.grid.get(curX, curY)
                 obsValue = j
-                
+					
+               
                 if obsValue == 1:
                     newP = self.truePositive*curValue/(self.truePositive*curValue+self.falsePositive*(1-curValue))
+                    if(curX == -250 and curY == 1):
+                        print "For field observed as true"
+                        print "current Value" , curValue
+                        print "New probability" , newP
+                    if(curX == 5 and curY == 5):
+                        print "For obstacle observed as true"
+                        print "current Value" , curValue
+                        print "New probability" , newP
                 else:
                     newP = self.falsePositive*curValue/(self.falsePositive*curValue+self.trueNegative*(1-curValue))
+                    if(curX == -250 and curY == 1):
+                        print "For field observed as false"
+                        print "current Value" , curValue
+                        print "New probability" , newP
+                    if(curX == 5 and curY == 5):
+                        print "For obstacle observed as false"
+                        print "current Value" , curValue
+                        print "New probability" , newP    
                 
                 self.grid.set(curX,curY, newP)
                 
