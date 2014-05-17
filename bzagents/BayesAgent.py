@@ -7,6 +7,7 @@ import Visualizer as vs
 import Calculations as fields
 from geo import Point, Line
 from bzrc import BZRC, Command
+from LocationList import LocationList
 
 class BayesAgent(object):
     
@@ -24,36 +25,51 @@ class BayesAgent(object):
         self.grid = OccGrid(800, 800, .07125)
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         self.time = time.time()
+        self.locationList = []
+        self.oldlocation = []
         vs.init_window(800,800)
         self.grid.draw()
-		
-    def tick(self):
         
-        curtime = time.time()
-        self.commands = []
         self.mytanks = self.bzrc.get_mytanks()
-    
+        
+        for i in range(10):
+            self.locationList.append(self.getRandomCoordinate(i))
+            self.oldlocation.append(Point(self.mytanks[i].x, self.mytanks[i].y))
+            
+    def tick(self):
+        self.commands = []
+        curtime = time.time()
+        self.mytanks = self.bzrc.get_mytanks()
         
         for tank in self.mytanks:
-            target = Point(random.randrange(-400,400), random.randrange(-400,400))
-            print target.x, target.y
+            curLocation = Point(tank.x, tank.y)
+            target = self.locationList[tank.index]
+            
+            if curLocation.distance(target) < 10:
+                target = self.getRandomCoordinate(tank.index)
+                
+                while self.grid.get(target.x, target.y) > .8:
+                    target = self.getRandomCoordinate(tank.index)
+                
+                self.locationList[tank.index] = target
+                
+            self.oldlocation[tank.index] = curLocation
             self.goToPoint(tank, target)
             
-       
         if(curtime - self.time > 4.25 ):
-            
             for tank in self.mytanks:
                 command = Command(tank.index,0,0,False)
+                self.commands = []
                 self.commands.append(command)
                 self.bzrc.do_commands(self.commands)
-                for i in range (5):
-                    self.getObservation(tank)
-            self.time = time.time()   
-		
-            
+                self.commands = []
+                self.getObservation(tank)
+            self.time = time.time()
+        
         
     def getObservation(self, tank):
-        
+        if tank.status != 'alive':
+            return
         pos, size, grid = self.bzrc.get_occgrid(tank.index)
         self.updateGrid(pos, size, grid)
         self.grid.draw()
@@ -63,10 +79,12 @@ class BayesAgent(object):
         totalY = 0
 
         deltaX,deltaY = self.fields.getAttractiveField(tank, target, 800, 5)
-      
    
         totalX += deltaX
         totalY += deltaY
+        
+        totalX += random.randrange(-300,300)
+        totalY += random.randrange(-300,300)
         
         self.sendCommand(totalY, totalX, tank)
         
@@ -85,10 +103,31 @@ class BayesAgent(object):
         theta = math.atan2(totalY,totalX)
         theta = self.normalize_angle(theta-tank.angle)
 
-        command = Command(tank.index,self.throttle*math.sqrt(totalY**2+totalX**2),.85*theta,shoot)
+        speed = self.throttle*math.sqrt(totalY**2+totalX**2)
+
+        self.commands = []
+        command = Command(tank.index,speed,.35*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
-      
+        self.commands = []
+        
+    def getRandomCoordinate(self, tankIndex):
+        #1 and 2: quadrant 1 (x,y)
+        if tankIndex == 1 or tankIndex == 2:
+            rval = Point(random.randrange(0,400), random.randrange(0,400))
+        #3 and 4: quadrant 2 (x,-y)
+        elif tankIndex == 3 or tankIndex == 4:
+            rval = Point(random.randrange(0,400), random.randrange(-400,0))
+        #5 and 6: quadrant 3 (-x,-y)
+        elif tankIndex == 5 or tankIndex == 6:
+            rval = Point(random.randrange(-400,0), random.randrange(-400,0))
+        #7 and 8: quadrant 4 (-x, y)
+        elif tankIndex == 7 or tankIndex == 8:
+            rval = Point(random.randrange(-400,0), random.randrange(0,400))
+        #9 and 10: middle ([-200,200],[-200,200])
+        else:
+            rval = Point(random.randrange(-200,200), random.randrange(-200,200))
+        return rval
         
     '''
     observation: the object returned by bzrc
