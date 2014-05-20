@@ -7,7 +7,7 @@ from os import listdir
 
 def removePunc(word):
     for c in word:
-        if(c == ',' or c =='?' or c == '\'' or c == '\"' or c == '.' or c == '!' or c == ':' or c ==';'):
+        if(c == '(' or c == ')' or c == '@' or c == ',' or c =='?' or c == '\'' or c == '\"' or c == '.' or c == '!' or c == ':' or c ==';'):
             word = word.replace(c,"")
     return word
 
@@ -21,8 +21,12 @@ def createBlankGroupsDict(groups):
 
 def cleanWord(word):
     word = word.strip()
-    word = removePunc(word)
-    word = word.lower()    
+    #word = removePunc(word)
+    if word.isdigit():
+        return None
+    word = word.lower() 
+    if len(word) == 0:
+        return None   
     return word
 
 def addWordMultinomial(word, words,fileWordCount):
@@ -69,6 +73,7 @@ if __name__ == '__main__':
     
     f = open("stopwords_en.txt", "r")
     for stopword in f:
+        stopword = stopword.strip()
         stopwords.append(stopword)
     f.close()
     
@@ -97,7 +102,8 @@ if __name__ == '__main__':
                 
                 for word in lineWords:    
                     word = cleanWord(word)
-                    if word.isspace() or word == None:
+                    if word == None or word.isspace() or word in stopwords:
+    
                         continue
                     
                     if mode == 'multinomial':
@@ -141,7 +147,7 @@ if __name__ == '__main__':
                 
                 for word in lineWords:    
                     word = cleanWord(word)
-                    if word == None:
+                    if word == None or word in stopwords:
                         continue
                     
                     if word in words:
@@ -167,8 +173,24 @@ if __name__ == '__main__':
 
     print "total accuracy" , float(accuracy)/float(total)
     
-                    
-        
+    builder = ""
+    justvalues = ""
+    for newsgroup,row in sorted(confusionMatrix.items()):
+        for key,value in sorted(row.items()):
+            builder += "      " + str(key).rjust(5) + " "
+        builder += "\n" + newsgroup
+        for key,value in sorted(row.items()):
+            builder += " " + str(value).rjust(5) + " "
+            justvalues += " " + str(value).rjust(5) + " "
+        builder += "\n"
+        justvalues +="\n"
+    print builder
+    print "\n\n\n", justvalues
+    
+
+    
+    
+    
         
     
     
