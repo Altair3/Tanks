@@ -2,6 +2,15 @@ import sys
 import math
 from os import listdir
 
+
+
+
+def removePunc(word):
+    for c in word:
+        if(c == ',' or c =='?' or c == '\'' or c == '\"' or c == '.' or c == '!' or c == ':' or c ==';'):
+            word = word.replace(c,"")
+    return word
+
 def createBlankGroupsDict(groups):
     rval = {}
     
@@ -12,10 +21,11 @@ def createBlankGroupsDict(groups):
 
 def cleanWord(word):
     word = word.strip()
-    word = word.lower()
+    word = removePunc(word)
+    word = word.lower()    
     return word
 
-def addWordMultinomial(word, words, group,fileWordCount):
+def addWordMultinomial(word, words,fileWordCount):
     fileWordCount += 1
     
     if word not in words:
@@ -24,7 +34,7 @@ def addWordMultinomial(word, words, group,fileWordCount):
     
     return fileWordCount
 
-def addWordBernoulli(word, words,group):
+def addWordBernoulli(word, words):
     if word not in words:
         words[word] = createBlankGroupsDict(groups)
     words[word][group] += 1
@@ -44,7 +54,7 @@ def maxDictionary(dict):
 if __name__ == '__main__':
     newsgroups = [ f for f in listdir("train/")]
     
-    mode = 'categorical'
+    mode = 'multinomial'
     
     numDocuments = {}
     totalDocumentCount = 0
@@ -52,12 +62,14 @@ if __name__ == '__main__':
     wordCount = {}
     words = {}
     
+    confusionMatrix = {}
     
     for group in newsgroups:
         path = "train/" + group
         
         numDocuments[group] = len([name for name in listdir(path)])
         wordCount[group] = 0
+        confusionMatrix[group] = {}
         groups.append(group)
     
     '''training'''    
@@ -76,16 +88,16 @@ if __name__ == '__main__':
                 
                 for word in lineWords:    
                     word = cleanWord(word)
-                    if word.isspace():
+                    if word.isspace() or word == None:
                         continue
                     
-                    if mode == 'categorical':
-                        fileWordCount = addWordMultinomial(word, words,group, fileWordCount)
-                    elif mode == 'multivariate':
+                    if mode == 'multinomial':
+                        fileWordCount = addWordMultinomial(word, words,fileWordCount)
+                    elif mode == 'bernoulli':
                         if word not in wordsInFile:
                             fileWordCount += 1
                             wordsInFile.append(word)
-                            addWordBernoulli(word, words,group)
+                            addWordBernoulli(word, words)
                     else:
                         pass
             wordCount[group] += fileWordCount
@@ -96,16 +108,19 @@ if __name__ == '__main__':
         totalDocumentCount += numDocuments[k]
     
     '''testing'''
+    print "begining testing"
     path = "test/"
     accuracy = 0
     total = 0
-    for group in newsgroups:
+    for name in newsgroups:
         
-        filepath = path + group + "/"
-        
-        for file in listdir(filepath):
-            f = open(file, "r")
-        
+        filepath = path + name + "/"
+        specificAccuracy = 0
+        specTotal = 0
+        for d in listdir(filepath):
+            d = filepath + d
+            f = open(d, "r")
+            
             currentProbability = createBlankGroupsDict(groups)
             
             #priors
@@ -117,21 +132,32 @@ if __name__ == '__main__':
                 
                 for word in lineWords:    
                     word = cleanWord(word)
+                    if word == None:
+                        continue
                     
                     if word in words:
-                        for group, count in words[word].items():
+                        for g, count in words[word].items():
                             if count != 0:
-                                currentProbability[group] *= math.log(float(count)/float(wordCount[group]))
+                                currentProbability[g] *= math.log(float(count)/float(wordCount[g]))
                             
+            prediction = maxDictionary(currentProbability)
         
-            #add in a confuse matrix
+            #add in a confused matrix
+            if prediction not in confusionMatrix[name]:
+                confusionMatrix[name][prediction] = 0
+            confusionMatrix[name][prediction] += 1
+            
             total+=1
-            if maxDictionary(currentProbability) == group:
+            specTotal+=1
+            if prediction == name:
                 accuracy+=1
+                specificAccuracy+=1
                 
-        
+        print "finished ", name, ", current accuracy: ", str(float(accuracy)/float(total))
+        print "specific accuracy", str(float(specificAccuracy)/float(specTotal))
 
     print "total accuracy" , float(accuracy)/float(total)
+    
                     
         
         
