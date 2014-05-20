@@ -15,7 +15,7 @@ def cleanWord(word):
     word = word.lower()
     return word
 
-def addWordCategorical(word, words, fileWordCount):
+def addWordMultinomial(word, words, group,fileWordCount):
     fileWordCount += 1
     
     if word not in words:
@@ -24,7 +24,7 @@ def addWordCategorical(word, words, fileWordCount):
     
     return fileWordCount
 
-def addWordMultivariate(word, words):
+def addWordBernoulli(word, words,group):
     if word not in words:
         words[word] = createBlankGroupsDict(groups)
     words[word][group] += 1
@@ -80,12 +80,12 @@ if __name__ == '__main__':
                         continue
                     
                     if mode == 'categorical':
-                        fileWordCount = addWordCategorical(word, words, fileWordCount)
+                        fileWordCount = addWordMultinomial(word, words,group, fileWordCount)
                     elif mode == 'multivariate':
                         if word not in wordsInFile:
                             fileWordCount += 1
                             wordsInFile.append(word)
-                            addWordMultivariate(word, words)
+                            addWordBernoulli(word, words,group)
                     else:
                         pass
             wordCount[group] += fileWordCount
