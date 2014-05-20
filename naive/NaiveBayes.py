@@ -97,31 +97,41 @@ if __name__ == '__main__':
     
     '''testing'''
     path = "test/"
-    
-    filepath = path + "talk.politics.misc/178474"
-    f = open(filepath, "r")
-    
-    currentProbability = createBlankGroupsDict(groups)
-    
-    #priors
-    for group, probabilty in currentProbability.items():
-        currentProbability[group] = math.log(float(numDocuments[group])/float(totalDocumentCount))
-    
-    for line in f:
-        lineWords = line.split()
+    accuracy = 0
+    total = 0
+    for group in newsgroups:
         
-        for word in lineWords:    
-            word = cleanWord(word)
+        filepath = path + group + "/"
+        
+        for file in listdir(filepath):
+            f = open(file, "r")
+        
+            currentProbability = createBlankGroupsDict(groups)
             
-            if word in words:
-                for group, count in words[word].items():
-                    if count != 0:
-                        currentProbability[group] *= math.log(float(count)/float(wordCount[group]))
+            #priors
+            for group, probabilty in currentProbability.items():
+                currentProbability[group] = math.log(float(numDocuments[group])/float(totalDocumentCount))
+            
+            for line in f:
+                lineWords = line.split()
+                
+                for word in lineWords:    
+                    word = cleanWord(word)
                     
-    print(currentProbability)
-    
-    print(maxDictionary(currentProbability))
-                    
+                    if word in words:
+                        for group, count in words[word].items():
+                            if count != 0:
+                                currentProbability[group] *= math.log(float(count)/float(wordCount[group]))
+                            
+        
+            #add in a confuse matrix
+            total+=1
+            if maxDictionary(currentProbability) == group:
+                accuracy+=1
+                
+        
+
+    print "total accuracy" , float(accuracy)/float(total)
                     
         
         
