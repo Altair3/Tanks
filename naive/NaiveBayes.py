@@ -62,7 +62,16 @@ if __name__ == '__main__':
     wordCount = {}
     words = {}
     
+
     confusionMatrix = {}
+
+    stopwords = []
+    
+    f = open("stopwords_en.txt", "r")
+    for stopword in f:
+        stopwords.append(stopword)
+    f.close()
+    
     
     for group in newsgroups:
         path = "train/" + group
