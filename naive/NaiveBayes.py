@@ -84,6 +84,8 @@ if __name__ == '__main__':
         numDocuments[group] = len([name for name in listdir(path)])
         wordCount[group] = 0
         confusionMatrix[group] = {}
+        for group2 in newsgroups:
+            confusionMatrix[group][group2] = 0
         groups.append(group)
     
     '''training'''    
@@ -156,10 +158,7 @@ if __name__ == '__main__':
                                 currentProbability[g] *= math.log(float(count)/float(wordCount[g]))
                             
             prediction = maxDictionary(currentProbability)
-        
-            #add in a confused matrix
-            if prediction not in confusionMatrix[name]:
-                confusionMatrix[name][prediction] = 0
+=
             confusionMatrix[name][prediction] += 1
             
             total+=1
