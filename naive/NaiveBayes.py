@@ -75,8 +75,8 @@ def printConfusionMatrix(confusionMatrix):
 if __name__ == '__main__':
     newsgroups = [ f for f in listdir("train/")]
     
-    mode = 'bernoulli'
-    
+    mode = sys.argv[1]
+
     numDocuments = {}
     totalDocumentCount = 0
     groups = []
@@ -158,9 +158,11 @@ if __name__ == '__main__':
             currentProbability = createBlankGroupsDict(groups)
             
             #priors
+            priors = 0
             for group, probabilty in currentProbability.items():
-                currentProbability[group] = (float(numDocuments[group])/float(totalDocumentCount))
-            
+                currentProbability[group] = math.log(float(numDocuments[group])/float(totalDocumentCount))
+                priors += float(numDocuments[group])/float(totalDocumentCount)
+                
             for line in f:
                 lineWords = line.split()
                 
@@ -170,13 +172,13 @@ if __name__ == '__main__':
                         continue
                     
                     if word in words:
-                        '''this is our issue area'''
+                        
                         for g, count in words[word].items():
-                            if True:
-                                if mode == 'multinomial':
-                                    currentProbability[g] *= (float(count+1)/float(wordCount[g]))
-                                else:
-                                    currentProbability[g] *= (float(count+1)/float(numDocuments[g]))                         
+                 
+                            if mode == 'multinomial':
+                                currentProbability[g] += math.log(float(count+1)/float(wordCount[g]))
+                            else:
+                                currentProbability[g] += math.log(float(count+1)/float(numDocuments[g]))                       
                             
             prediction = maxDictionary(currentProbability)
             
@@ -192,7 +194,8 @@ if __name__ == '__main__':
         print "specific accuracy", str(float(specificAccuracy)/float(specTotal))
 
     print "total accuracy" , float(accuracy)/float(total)
-    
+    print "prob of priors" , priors
+    print "prob of words" ,
     printConfusionMatrix(confusionMatrix)
     
     
