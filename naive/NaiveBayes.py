@@ -5,12 +5,6 @@ from os import listdir
 
 
 
-def removePunc(word):
-    for c in word:
-        if(c == '(' or c == ')' or c == '@' or c == ',' or c =='?' or c == '\'' or c == '\"' or c == '.' or c == '!' or c == ':' or c ==';'):
-            word = word.replace(c,"")
-    return word
-
 def createBlankGroupsDict(groups):
     rval = {}
     
@@ -21,7 +15,7 @@ def createBlankGroupsDict(groups):
     
 def cleanWord(word):
     word = word.strip()
-    #word = removePunc(word)
+
     if word.isdigit():
         return None
     word = word.lower() 
@@ -137,10 +131,14 @@ if __name__ == '__main__':
             wordCount[group] += fileWordCount
             #print("Finished reading file: " + file)
         print("Finished training: " + group + ", total documents: " + str(numDocuments[group]) + ", total word count: " + str(wordCount[group]))
-        
+    
+    baseline = 0
     for k in numDocuments.keys():
         totalDocumentCount += numDocuments[k]
-    
+        if (numDocuments[k] > baseline):
+            baseline = numDocuments[k]
+         
+    print "baseline" , float(baseline)/float(totalDocumentCount)
     '''testing'''
     print "begining testing"
     path = "test/"
@@ -159,6 +157,7 @@ if __name__ == '__main__':
             
             #priors
             priors = 0
+            probs = {}
             for group, probabilty in currentProbability.items():
                 currentProbability[group] = math.log(float(numDocuments[group])/float(totalDocumentCount))
                 priors += float(numDocuments[group])/float(totalDocumentCount)
@@ -174,11 +173,13 @@ if __name__ == '__main__':
                     if word in words:
                         
                         for g, count in words[word].items():
-                 
+                            
                             if mode == 'multinomial':
                                 currentProbability[g] += math.log(float(count+1)/float(wordCount[g]))
                             else:
-                                currentProbability[g] += math.log(float(count+1)/float(numDocuments[g]))                       
+                                currentProbability[g] += math.log(float(count+1)/float(numDocuments[g]))   
+                            
+                                                    
                             
             prediction = maxDictionary(currentProbability)
             
@@ -195,7 +196,7 @@ if __name__ == '__main__':
 
     print "total accuracy" , float(accuracy)/float(total)
     print "prob of priors" , priors
-    print "prob of words" ,
+    print "prob of words" , probs
     printConfusionMatrix(confusionMatrix)
     
     
