@@ -18,7 +18,7 @@ def createBlankGroupsDict(groups):
         rval[group] = 0
     
     return rval
-
+    
 def cleanWord(word):
     word = word.strip()
     #word = removePunc(word)
@@ -44,16 +44,33 @@ def addWordBernoulli(word, words):
     words[word][group] += 1
     
 def maxDictionary(dict):
-    curMax = -1000000
-    curKey = None
-    
+    count = 0
     for k,v in dict.items():
-        if v > curMax:
+        if count == 0:
             curMax = v
             curKey = k
+        else:
+            if v > curMax:
+                curMax = v
+                curKey = k
+        count += 1
     
     return curKey
     
+def printConfusionMatrix(confusionMatrix):
+    builder = ""
+    justvalues = ""
+    for newsgroup,row in sorted(confusionMatrix.items()):
+        for key,value in sorted(row.items()):
+            builder += "      " + str(key).rjust(5) + " "
+        builder += "\n" + newsgroup
+        for key,value in sorted(row.items()):
+            builder += " " + str(value).rjust(5) + " "
+            justvalues += " " + str(value).rjust(5) + " "
+        builder += "\n"
+        justvalues +="\n"
+    print builder
+    print "\n\n\n", justvalues
 
 if __name__ == '__main__':
     newsgroups = [ f for f in listdir("train/")]
@@ -129,8 +146,8 @@ if __name__ == '__main__':
     path = "test/"
     accuracy = 0
     total = 0
+    
     for name in newsgroups:
-        
         filepath = path + name + "/"
         specificAccuracy = 0
         specTotal = 0
@@ -156,9 +173,11 @@ if __name__ == '__main__':
                         for g, count in words[word].items():
                             if count != 0:
                                 currentProbability[g] *= math.log(float(count)/float(wordCount[g]))
+                            elif count == 0: #comment out this line and the next line for smoothing
+                                currentProbability[g] *= math.log(1.0/float(wordCount[g]))
                             
             prediction = maxDictionary(currentProbability)
-=
+            
             confusionMatrix[name][prediction] += 1
             
             total+=1
@@ -172,26 +191,6 @@ if __name__ == '__main__':
 
     print "total accuracy" , float(accuracy)/float(total)
     
-    builder = ""
-    justvalues = ""
-    for newsgroup,row in sorted(confusionMatrix.items()):
-        for key,value in sorted(row.items()):
-            builder += "      " + str(key).rjust(5) + " "
-        builder += "\n" + newsgroup
-        for key,value in sorted(row.items()):
-            builder += " " + str(value).rjust(5) + " "
-            justvalues += " " + str(value).rjust(5) + " "
-        builder += "\n"
-        justvalues +="\n"
-    print builder
-    print "\n\n\n", justvalues
-    
-
+    printConfusionMatrix(confusionMatrix)
     
     
-    
-        
-    
-    
-        
-        
