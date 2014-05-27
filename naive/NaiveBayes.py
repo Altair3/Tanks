@@ -26,7 +26,7 @@ def cleanWord(word):
         return None
     word = word.lower() 
     if len(word) == 0:
-        return None   
+        return None  
     return word
 
 def addWordMultinomial(word, words,fileWordCount):
@@ -75,7 +75,7 @@ def printConfusionMatrix(confusionMatrix):
 if __name__ == '__main__':
     newsgroups = [ f for f in listdir("train/")]
     
-    mode = 'multinomial'
+    mode = 'bernoulli'
     
     numDocuments = {}
     totalDocumentCount = 0
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     
     for group in newsgroups:
         path = "train/" + group
-        
+      
         numDocuments[group] = len([name for name in listdir(path)])
         wordCount[group] = 0
         confusionMatrix[group] = {}
@@ -159,7 +159,7 @@ if __name__ == '__main__':
             
             #priors
             for group, probabilty in currentProbability.items():
-                currentProbability[group] = math.log(float(numDocuments[group])/float(totalDocumentCount))
+                currentProbability[group] = (float(numDocuments[group])/float(totalDocumentCount))
             
             for line in f:
                 lineWords = line.split()
@@ -170,11 +170,13 @@ if __name__ == '__main__':
                         continue
                     
                     if word in words:
+                        '''this is our issue area'''
                         for g, count in words[word].items():
-                            if count != 0:
-                                currentProbability[g] *= math.log(float(count)/float(wordCount[g]))
-                            elif count == 0: #comment out this line and the next line for smoothing
-                                currentProbability[g] *= math.log(1.0/float(wordCount[g]))
+                            if True:
+                                if mode == 'multinomial':
+                                    currentProbability[g] *= (float(count+1)/float(wordCount[g]))
+                                else:
+                                    currentProbability[g] *= (float(count+1)/float(numDocuments[g]))                         
                             
             prediction = maxDictionary(currentProbability)
             
