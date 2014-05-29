@@ -10,7 +10,7 @@ class PigeonAgent(object):
     def __init__(self, bzrc, mode, time):
         self.bzrc = bzrc
         self.mode = mode
-        self.num_tanks = 10
+        self.num_tanks = 1
         self.cur_time = time
         
         self.const_velocity = .5
