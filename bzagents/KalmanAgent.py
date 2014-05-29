@@ -12,6 +12,7 @@ import numpy as np
 from bzrc import BZRC, Command
 from obstacle import Obstacle
 from geo import Point, Line
+import KalmanPlotter as plotter
 t = .5
 class KalmanAgent(object):
     
@@ -63,7 +64,10 @@ class KalmanAgent(object):
         for tank in mytanks:
             
             enemyX,enemyY = self.Kfilter.runKalman(self.bzrc)
-            
+        
+        '''call gnuplot here'''
+        sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc)
+        plotter.plot(sigmaX,sigmaY,rho)
      
 
     
@@ -128,13 +132,13 @@ class Calculations(object):
         sigmaYsquare = self.SigmaCurrent.item((3,3))
         sigmaX = math.sqrt(sigmaXsquare)
         sigmaY = math.sqrt(sigmaYsquare)
-        tank = bzrc.read_othertanks[0]
+        tank = bzrc.get_othertanks()[0]
         X = tank.x
         Y = tank.y
         rho = ((X-self.MuCurrent.item((0,0)))*(Y-self.MuCurrent.item((3,0))))/(sigmaX*sigmaY)
         self.covariance = np.matrix([[sigmaXsquare,(rho*sigmaX*sigmaY)],
                                     [(rho*sigmaX*sigmaY),sigmaYsquare]])
-                                    
+        return sigmaX,sigmaY,rho
     
     
                                     

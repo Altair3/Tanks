@@ -80,66 +80,20 @@ def gnuplot_header(minimum, maximum):
     return s
  
     
-def getTotalDeltaXY(x, y):
-    
-    calc = Calculations()
-    
-    totalDeltaX = 0
-    totalDeltaY = 0
-    
-    tank = Blank(x, y)
-    flag = Blank(0.0, -370.0)
-    deltaX,deltaY = calc.getAttractiveField(tank, flag, 800, 1)
-    totalDeltaX += deltaX
-    totalDeltaY += deltaY
-    
-    #the "L"s
-    for i in range(12):
-        ox, oy = MIDPOINTS[i]
-        obstacle = Blank(ox, oy)
-        deltaX, deltaY = calc.getTangentialField2(tank,obstacle, 42, 42, "CCW")
-        #deltaX, deltaY = calc.getRepulsiveField(tank,obstacle, 42*1.2, 42)
-        totalDeltaX += deltaX
-        totalDeltaY += deltaY
-        
-    #the obstacle in the middle
-    ox, oy = MIDPOINTS[12]
-    obstacle = Blank(ox, oy)
-    deltaX, deltaY = calc.getTangentialField2(tank,obstacle, 60, 60, "CCW")
-    #deltaX, deltaY = calc.getRepulsiveField(tank,obstacle, 60*1.2, 60)
-    totalDeltaX += deltaX
-    totalDeltaY += deltaY
-    
-    return totalDeltaX, totalDeltaY
-    
-    
-def plot_field():
+def plot_field(sigmaX,sigmaY,rho):
     '''Return a Gnuplot command to plot a field.'''
-    
-    s = "plot '-' with vectors head\n"
-
-    separation = WORLDSIZE / SAMPLES
-    end = WORLDSIZE / 2 - separation / 2
-    start = -end
-
-    points = ((x, y) for x in linspace(start, end, SAMPLES)
-                for y in linspace(start, end, SAMPLES))
-
-    for x, y in points:
-        
-        deltaX, deltaY = getTotalDeltaXY(x, y)
-        
-        plotvalues = gpi_point(x, y, deltaX, deltaY)
-        if plotvalues is not None:
-            x1, y1, x2, y2 = plotvalues
-            s += '%s %s %s %s\n' % (x1, y1, x2, y2)
-            
-    
-    s += 'e\n'
+    s = ""
+    s += 'sigma_x = ' + str(sigmaX) + "\n"
+    s += 'sigma_y = ' + str(sigmaY) + "\n"
+    s += 'rho = ' + str(rho) + "\n"
+    s += 'splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2))* exp(-1.0/2.0 * (x**2 / sigma_x**2 + y**2 / sigma_y**2-2.0*rho*x*y/(sigma_x*sigma_y) ) ) with pm3d\n'
+    print "sigmaX",sigmaX
+    print "sigmaY",sigmaY
+    print"rho",rho
     return s
-
-outfile = open(FILENAME, 'w')
-print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
-print >>outfile, draw_obstacles(OBSTACLES)
-print >>outfile, plot_field()
+    
+def plot(sigmaX,sigmaY,rho):
+	outfile = open(FILENAME, 'w')
+	print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
+	print >>outfile, plot_field(sigmaX,sigmaY,rho)
 
