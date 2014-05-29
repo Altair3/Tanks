@@ -87,9 +87,9 @@ def plot_field(sigmaX,sigmaY,rho):
     s += 'sigma_y = ' + str(sigmaY) + "\n"
     s += 'rho = ' + str(rho) + "\n"
     s += 'splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2))* exp(-1.0/2.0 * (x**2 / sigma_x**2 + y**2 / sigma_y**2-2.0*rho*x*y/(sigma_x*sigma_y) ) ) with pm3d\n'
-    print "sigmaX",sigmaX
-    print "sigmaY",sigmaY
-    print"rho",rho
+    #print "sigmaX",sigmaX
+    #print "sigmaY",sigmaY
+    #print"rho",rho
     return s
     
 def plot(sigmaX,sigmaY,rho):

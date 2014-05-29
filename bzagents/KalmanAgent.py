@@ -34,23 +34,35 @@ class KalmanAgent(object):
             angle -= 2 * math.pi
         return angle
         
-    def sendCommand(self,totalY,totalX,tank):
-        shoot = self.shoot_em(tank)
-     
-        theta = math.atan2(totalY,totalX)
-        theta = self.normalize_angle(theta-tank.angle)
+    def sendCommand(self,totalY,totalX, theta, shoot, tank):
+        #theta = math.atan2(totalY,totalX)
+        #theta = self.normalize_angle(theta-tank.angle)
+        
+        print "send theta:", theta
  
-        command = Command(tank.index,0,.85*theta,shoot)
+        command = Command(tank.index,0,theta,shoot)
         self.commands.append(command)
-        self.bzrc.do_commands(self.commands)  
+        self.bzrc.do_commands(self.commands)
+        
+    def angle(self,tank,target):
+        angle = math.atan2((target.y-tank.y),(target.x-tank.x))
+        return angle
+        
+    def getDeltaXY(self, tank, enemy):
+        theta = self.angle(tank, enemy)
+        distance = Point(tank.x, tank.y).distance(Point(enemy.x,enemy.y))
+        
+        deltaX = distance*math.cos(theta)
+        deltaY = distance*math.sin(theta)
+        
+        return deltaX, deltaY
         
     def tick(self):
-        
       
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
         
         ''' list of teammates with velocities and position and flag posession etc. '''
-        self.mytanks = mytanks
+        self.mytanks = self.bzrc.get_mytanks()
         ''' positions and angle of othertanks '''
         self.othertanks = othertanks
   
@@ -60,10 +72,24 @@ class KalmanAgent(object):
 
         self.commands = []
         
+        tank = self.bzrc.get_mytanks()[0]
         
-        for tank in mytanks:
-            
-            enemyX,enemyY = self.Kfilter.runKalman(self.bzrc)
+        enemyX,enemyY = self.Kfilter.runKalman(self.bzrc)
+        distance = Point(tank.x, tank.y).distance(Point(enemyX,enemyY))
+        
+        deltaX, deltaY = self.getDeltaXY(tank,Point(enemyX,enemyY))
+        print "dX, dY:", deltaX, deltaY
+        
+        theta = math.atan2(deltaY,deltaX)
+        theta = self.normalize_angle(theta-tank.angle)
+        print "theta:", theta
+        
+        if distance < 350 and (theta < 0.1 and theta > -0.1):
+            shoot = True
+        else:
+            shoot = False
+        
+        self.sendCommand(deltaX, deltaY, theta, shoot, tank)
         
         '''call gnuplot here'''
         sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc)
