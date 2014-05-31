@@ -18,7 +18,7 @@ class PigeonAgent(object):
         self.time_move = self.cur_time
         self.time_turn = self.cur_time
         
-        self.move_interval = 5.0
+        self.move_interval = 2.0
         self.turn_interval = 2.0
         
     def behave(self, time):
@@ -60,8 +60,7 @@ class PigeonAgent(object):
         return direction
         
     def getRandomSpeed(self):
-        rval = random.random()
-        rval *= self.getDirection()
+        rval = random.uniform(0.4, 1.0)
         return rval
         
     def stop(self):
