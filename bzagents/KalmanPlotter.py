@@ -69,6 +69,7 @@ def gnuplot_header(minimum, maximum):
     s += 'set yrange [%s: %s]\n' % (minimum, maximum)
     s += 'set pm3d\n'
     s += 'set view map\n'
+    
     # The key is just clutter.  Get rid of it:
     s += 'unset key\n'
     # Make sure the figure is square since the world is square:

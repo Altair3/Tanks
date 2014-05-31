@@ -38,7 +38,7 @@ class KalmanAgent(object):
               
         print "send theta:", theta
  
-        command = Command(tank.index,0,theta,shoot)
+        command = Command(tank.index,0,1.15*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
         
@@ -71,23 +71,28 @@ class KalmanAgent(object):
         self.commands = []
         
         tank = self.bzrc.get_mytanks()[0]
-        
+        if(self.enemies[0].status == 'dead'):
+            return
         '''do a predictive filter here maybe, before they shoot'''
         Mu,Sigma = self.Kfilter.runKalman(self.bzrc)
-        MuPred,SigmaPred = self.Kfilter.predictiveKalman(Mu,Sigma,4)
-        enemyX = MuPred.item((0,0))
-        enemyY = MuPred.item((3,0))
+       
+        enemyX = Mu.item((0,0))
+        enemyY = Mu.item((3,0))
         
         distance = Point(tank.x, tank.y).distance(Point(enemyX,enemyY))
         
-        deltaX, deltaY = self.getDeltaXY(tank,Point(enemyX,enemyY))
+        pred = (distance/float(self.constants['shotspeed']))*2
+        pred = int(pred+1)
+        MuPred,SigmaPred = self.Kfilter.predictiveKalman(Mu,Sigma,pred)
+        targetX,targetY = MuPred.item((0,0)),MuPred.item((3,0))
+        deltaX, deltaY = self.getDeltaXY(tank,Point(targetX,targetY))
         print "dX, dY:", deltaX, deltaY
         
         theta = math.atan2(deltaY,deltaX)
         theta = self.normalize_angle(theta-tank.angle)
         print "theta:", theta
         
-        if distance < 350 and (theta < 0.1 and theta > -0.1):
+        if distance < 450 and (theta < 0.15 and theta > -0.15):
             shoot = True
         else:
             shoot = False
@@ -95,8 +100,10 @@ class KalmanAgent(object):
         self.sendCommand(deltaX, deltaY, theta, shoot, tank)
         
         '''call gnuplot here'''
-        sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc,MuPred,SigmaPred)
-        plotter.plot(sigmaX,sigmaY,rho,enemyX,enemyY)
+        sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc,Mu,Sigma)
+        print "sigmaX and Y", sigmaX,sigmaY
+        print "rho" , rho
+        plotter.plot(sigmaX,sigmaY,0,enemyX,enemyY)
      
 
     
@@ -123,22 +130,22 @@ class Calculations(object):
                             [0,0,0,0,0,1]])
         self.SigmaS = np.matrix([[.1,0,0,0,0,0],
                                 [0,.1,0,0,0,0,],
-                                [0,0,100,0,0,0],
+                                [0,0,25,0,0,0],
                                 [0,0,0,.1,0,0],
                                 [0,0,0,0,.1,0],
-                                [0,0,0,0,0,100]])
+                                [0,0,0,0,0,25]])
         self.H = np.matrix([[1,0,0,0,0,0],
                             [0,0,0,1,0,0]])
         self.SigmaE = np.matrix([[25,0],[0,25]])
         self.FTrans = self.F.transpose()
         self.HTrans = self.H.transpose()
         self.MuKnot = np.matrix([[210],[0],[0],[0],[0],[0]])
-        self.SigmaKnot = np.matrix([[100,0,0,0,0,0],
-                                    [0,1,0,0,0,0],
-                                    [0,0,1,0,0,0],
-                                    [0,0,0,100,0,0],
-                                    [0,0,0,0,1,0],
-                                    [0,0,0,0,0,1]])
+        self.SigmaKnot = np.matrix([[50,0,0,0,0,0],
+                                    [0,.1,0,0,0,0],
+                                    [0,0,.1,0,0,0],
+                                    [0,0,0,50,0,0],
+                                    [0,0,0,0,.1,0],
+                                    [0,0,0,0,0,.1]])
         self.SigmaCurrent = self.SigmaKnot
         self.SigmaPrev = self.SigmaKnot
         self.MuCurrent = self.MuKnot
@@ -168,6 +175,8 @@ class Calculations(object):
         
     '''function for plotting the filter'''
     def covarianceMatrix(self,bzrc,Mu,Sigma):
+        print "sigX", Sigma.item((0,0))
+        print "siggy", Sigma.item((3,3))
         sigmaXsquare = Sigma.item((0,0))
         sigmaYsquare = Sigma.item((3,3))
         sigmaX = math.sqrt(sigmaXsquare)
@@ -175,7 +184,8 @@ class Calculations(object):
         tank = bzrc.get_othertanks()[0]
         X = tank.x
         Y = tank.y
-        rho = ((X-Mu.item((0,0)))*(Y-Mu.item((3,0))))/(sigmaX*sigmaY)
+        rho = ((X-Mu.item((0,0)))*(Y-Mu.item((3,0))))
+        rho = rho/(sigmaX*sigmaY)
         self.covariance = np.matrix([[sigmaXsquare,(rho*sigmaX*sigmaY)],
                                     [(rho*sigmaX*sigmaY),sigmaYsquare]])
         return sigmaX,sigmaY,rho
@@ -214,15 +224,15 @@ class Calculations(object):
         return (self.F*Sigma*self.FTrans) + self.SigmaS    
         
     def predictiveKTime(self,Sigma):
-        firstTerm = self.transitionTerm()
+        firstTerm = self.predictiveTrans(Sigma)
         secondTerm = ((self.H*firstTerm*self.HTrans)+self.SigmaE).I
         secondTerm = self.HTrans * secondTerm
         return firstTerm * secondTerm
         
     def predictiveSigma(self,Sigma):
         identity = np.identity(6)
-        firstTerm = identity - (self.KTimePlusOne()*self.H)
-        secondTerm = self.transitionTerm()
+        firstTerm = identity - (self.predictiveKTime(Sigma)*self.H)
+        secondTerm = self.predictiveTrans(Sigma)
         Sigma = firstTerm * secondTerm
         return Sigma
         
