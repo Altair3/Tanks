@@ -80,20 +80,20 @@ def gnuplot_header(minimum, maximum):
     return s
  
     
-def plot_field(sigmaX,sigmaY,rho):
+def plot_field(sigmaX,sigmaY,rho,muX,muY):
     '''Return a Gnuplot command to plot a field.'''
     s = ""
     s += 'sigma_x = ' + str(sigmaX) + "\n"
     s += 'sigma_y = ' + str(sigmaY) + "\n"
     s += 'rho = ' + str(rho) + "\n"
-    s += 'splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2))* exp(-1.0/2.0 * (x**2 / sigma_x**2 + y**2 / sigma_y**2-2.0*rho*x*y/(sigma_x*sigma_y) ) ) with pm3d\n'
-    #print "sigmaX",sigmaX
-    #print "sigmaY",sigmaY
-    #print"rho",rho
+    s += 'muX = ' + str(muX) + "\n"
+    s += 'muY = ' + str(muY) + "\n"
+    s += 'splot 1.0/(2.0 * pi * sigma_x * sigma_y * sqrt(1 - rho**2))* exp(-1.0/2.0 * ((x-muX)**2 / sigma_x**2 + (y-muY)**2 / sigma_y**2-2.0*rho*(x-muX)*(y-muY)/(sigma_x*sigma_y) ) ) with pm3d\n'
+
     return s
     
-def plot(sigmaX,sigmaY,rho):
+def plot(sigmaX,sigmaY,rho,muX,muY):
 	outfile = open(FILENAME, 'w')
 	print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
-	print >>outfile, plot_field(sigmaX,sigmaY,rho)
+	print >>outfile, plot_field(sigmaX,sigmaY,rho,muX,muY)
 

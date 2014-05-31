@@ -35,9 +35,7 @@ class KalmanAgent(object):
         return angle
         
     def sendCommand(self,totalY,totalX, theta, shoot, tank):
-        #theta = math.atan2(totalY,totalX)
-        #theta = self.normalize_angle(theta-tank.angle)
-        
+              
         print "send theta:", theta
  
         command = Command(tank.index,0,theta,shoot)
@@ -74,7 +72,12 @@ class KalmanAgent(object):
         
         tank = self.bzrc.get_mytanks()[0]
         
-        enemyX,enemyY = self.Kfilter.runKalman(self.bzrc)
+        '''do a predictive filter here maybe, before they shoot'''
+        Mu,Sigma = self.Kfilter.runKalman(self.bzrc)
+        MuPred,SigmaPred = self.Kfilter.predictiveKalman(Mu,Sigma,4)
+        enemyX = MuPred.item((0,0))
+        enemyY = MuPred.item((3,0))
+        
         distance = Point(tank.x, tank.y).distance(Point(enemyX,enemyY))
         
         deltaX, deltaY = self.getDeltaXY(tank,Point(enemyX,enemyY))
@@ -92,8 +95,8 @@ class KalmanAgent(object):
         self.sendCommand(deltaX, deltaY, theta, shoot, tank)
         
         '''call gnuplot here'''
-        sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc)
-        plotter.plot(sigmaX,sigmaY,rho)
+        sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc,MuPred,SigmaPred)
+        plotter.plot(sigmaX,sigmaY,rho,enemyX,enemyY)
      
 
     
@@ -140,28 +143,39 @@ class Calculations(object):
         self.SigmaPrev = self.SigmaKnot
         self.MuCurrent = self.MuKnot
         self.MuPrev = self.MuKnot
-        
-    ''' runs the kalman filter and returns the mu x and mu y
-        which is our prediction of where the enemy likely is'''
+    
+    '''runs the filter but predicts out into the future, @param iterations down the markov
+    chain. Returns the new predicted Mu and Sigma for use in plotting, etc. '''
+    def predictiveKalman(self,Mu,Sigma,iterations):
+        if(iterations == 0):
+            return Mu,Sigma
+        else:
+            MuNext = self.predictiveMu(Mu)
+            SigmaNext = self.predictiveSigma(Sigma)
+            iterations = iterations-1
+            return self.predictiveKalman(MuNext,SigmaNext,iterations)
+            
+    ''' runs the kalman filter and returns the mu and sigma
+        which is our guess of where the enemy currently is'''
     def runKalman(self,bzrc):
         
         self.MuPrev = self.updateMuCurrent(bzrc)
         
         self.SigmaPrev = self.updateSigmaCurrent()
         
-        return self.MuPrev.item((0,0)),self.MuPrev.item((3,0))
+        return self.MuPrev,self.SigmaPrev
         
         
     '''function for plotting the filter'''
-    def covarianceMatrix(self,bzrc):
-        sigmaXsquare = self.SigmaCurrent.item((0,0))
-        sigmaYsquare = self.SigmaCurrent.item((3,3))
+    def covarianceMatrix(self,bzrc,Mu,Sigma):
+        sigmaXsquare = Sigma.item((0,0))
+        sigmaYsquare = Sigma.item((3,3))
         sigmaX = math.sqrt(sigmaXsquare)
         sigmaY = math.sqrt(sigmaYsquare)
         tank = bzrc.get_othertanks()[0]
         X = tank.x
         Y = tank.y
-        rho = ((X-self.MuCurrent.item((0,0)))*(Y-self.MuCurrent.item((3,0))))/(sigmaX*sigmaY)
+        rho = ((X-Mu.item((0,0)))*(Y-Mu.item((3,0))))/(sigmaX*sigmaY)
         self.covariance = np.matrix([[sigmaXsquare,(rho*sigmaX*sigmaY)],
                                     [(rho*sigmaX*sigmaY),sigmaYsquare]])
         return sigmaX,sigmaY,rho
@@ -171,6 +185,9 @@ class Calculations(object):
     ''' helper functions to run the equations'''
     def transitionTerm(self):
         return (self.F*self.SigmaPrev*self.FTrans) + self.SigmaS
+    
+    def predictiveMu(self,Mu):
+        return self.F*Mu
     
     def KTimePlusOne(self):
         firstTerm = self.transitionTerm()
@@ -192,6 +209,22 @@ class Calculations(object):
         secondTerm = self.transitionTerm()
         self.SigmaCurrent = firstTerm * secondTerm
         return self.SigmaCurrent
+        
+    def predictiveTrans(self,Sigma):
+        return (self.F*Sigma*self.FTrans) + self.SigmaS    
+        
+    def predictiveKTime(self,Sigma):
+        firstTerm = self.transitionTerm()
+        secondTerm = ((self.H*firstTerm*self.HTrans)+self.SigmaE).I
+        secondTerm = self.HTrans * secondTerm
+        return firstTerm * secondTerm
+        
+    def predictiveSigma(self,Sigma):
+        identity = np.identity(6)
+        firstTerm = identity - (self.KTimePlusOne()*self.H)
+        secondTerm = self.transitionTerm()
+        Sigma = firstTerm * secondTerm
+        return Sigma
         
     def reset(self):
         self.SigmaCurrent = self.SigmaKnot
