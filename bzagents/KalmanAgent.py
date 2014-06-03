@@ -35,9 +35,6 @@ class KalmanAgent(object):
         return angle
         
     def sendCommand(self,totalY,totalX, theta, shoot, tank):
-              
-        print "send theta:", theta
- 
         command = Command(tank.index,0,1.15*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
@@ -56,6 +53,7 @@ class KalmanAgent(object):
         return deltaX, deltaY
         
     def tick(self):
+        start_time = time.time()
       
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
         
@@ -81,18 +79,21 @@ class KalmanAgent(object):
         
         distance = Point(tank.x, tank.y).distance(Point(enemyX,enemyY))
         
+        if distance > 450:
+            return
+        
         pred = (distance/float(self.constants['shotspeed']))*2
         pred = int(pred+1)
         MuPred,SigmaPred = self.Kfilter.predictiveKalman(Mu,Sigma,pred)
         targetX,targetY = MuPred.item((0,0)),MuPred.item((3,0))
         deltaX, deltaY = self.getDeltaXY(tank,Point(targetX,targetY))
-        print "dX, dY:", deltaX, deltaY
         
         theta = math.atan2(deltaY,deltaX)
         theta = self.normalize_angle(theta-tank.angle)
-        print "theta:", theta
         
-        if distance < 450 and (theta < 0.15 and theta > -0.15):
+        distance = Point(tank.x, tank.y).distance(Point(targetX,targetY))
+        
+        if distance <= 370 and (theta < 0.1 and theta > -0.1):
             shoot = True
         else:
             shoot = False
@@ -101,16 +102,14 @@ class KalmanAgent(object):
         
         '''call gnuplot here'''
         sigmaX,sigmaY,rho = self.Kfilter.covarianceMatrix(self.bzrc,Mu,Sigma)
-        print "sigmaX and Y", sigmaX,sigmaY
-        print "rho" , rho
+        #print "sigmaX and Y", sigmaX,sigmaY
+        #print "rho" , rho
         plotter.plot(sigmaX,sigmaY,0,enemyX,enemyY)
-     
-
-    
-    def shoot_em(self, tank):
-        my_position = Point(tank.x, tank.y)
-      
-                        
+        
+        end_time = time.time()
+        
+        print "TIME: ", (end_time-start_time)
+        
         return True                    
                 
 """ A class to perform the potential field and controller calculations
@@ -175,17 +174,20 @@ class Calculations(object):
         
     '''function for plotting the filter'''
     def covarianceMatrix(self,bzrc,Mu,Sigma):
-        print "sigX", Sigma.item((0,0))
-        print "siggy", Sigma.item((3,3))
+        #print "sigX", Sigma.item((0,0))
+        #print "siggy", Sigma.item((3,3))
+        #print Sigma
         sigmaXsquare = Sigma.item((0,0))
         sigmaYsquare = Sigma.item((3,3))
         sigmaX = math.sqrt(sigmaXsquare)
         sigmaY = math.sqrt(sigmaYsquare)
-        tank = bzrc.get_othertanks()[0]
-        X = tank.x
-        Y = tank.y
-        rho = ((X-Mu.item((0,0)))*(Y-Mu.item((3,0))))
-        rho = rho/(sigmaX*sigmaY)
+        rhoSigmaXSigmaY = Sigma.item(0,2)
+        rho = rhoSigmaXSigmaY/(sigmaX*sigmaY)
+        #tank = bzrc.get_othertanks()[0]
+        #X = tank.x
+        #Y = tank.y
+        #rho = ((X-Mu.item((0,0)))*(Y-Mu.item((3,0))))
+        #rho = rho/(sigmaX*sigmaY)
         self.covariance = np.matrix([[sigmaXsquare,(rho*sigmaX*sigmaY)],
                                     [(rho*sigmaX*sigmaY),sigmaYsquare]])
         return sigmaX,sigmaY,rho
@@ -239,8 +241,8 @@ class Calculations(object):
     def reset(self):
         self.SigmaCurrent = self.SigmaKnot
         self.SigmaPrev = self.SigmaKnot
-        self.MuCurrent = self.MuKnot
-        self.MuPrev = self.MuKnot
+        #self.MuCurrent = self.MuKnot
+        self.MuPrev = self.MuCurrent#self.MuKnot
 
 def main():
     # Process CLI arguments.

@@ -19,7 +19,7 @@ class PigeonAgent(object):
         self.time_turn = self.cur_time
         
         self.move_interval = 2.0
-        self.turn_interval = 2.0
+        self.turn_interval = 1.0
         
     def behave(self, time):
         if self.mode == "sit":
@@ -49,7 +49,7 @@ class PigeonAgent(object):
         return rval
         
     def getDirection(self):
-        threshold = .25
+        threshold = .5
         
         n = random.random()
         if n <= threshold:

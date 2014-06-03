@@ -62,11 +62,13 @@ def gpi_point(x, y, vec_x, vec_y):
             vec_x * VEC_LEN, vec_y * VEC_LEN)
 
 
-def gnuplot_header(minimum, maximum):
+def gnuplot_header(centerX, centerY):
     '''Return a string that has all of the gnuplot sets and unsets.'''
     s = ''
-    s += 'set xrange [%s: %s]\n' % (minimum, maximum)
-    s += 'set yrange [%s: %s]\n' % (minimum, maximum)
+    #s += 'set xrange [%s: %s]\n' % (centerX-50, centerX+50)
+    #s += 'set yrange [%s: %s]\n' % (centerY-50, centerY+50)
+    s += 'set xrange [%s: %s]\n' % (centerX, centerY)
+    s += 'set yrange [%s: %s]\n' % (centerX, centerY)
     s += 'set pm3d\n'
     s += 'set view map\n'
     
@@ -94,7 +96,8 @@ def plot_field(sigmaX,sigmaY,rho,muX,muY):
     return s
     
 def plot(sigmaX,sigmaY,rho,muX,muY):
-	outfile = open(FILENAME, 'w')
-	print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
-	print >>outfile, plot_field(sigmaX,sigmaY,rho,muX,muY)
+    outfile = open(FILENAME, 'w')
+    #print >>outfile, gnuplot_header(muX, muY)
+    print >>outfile, gnuplot_header(-WORLDSIZE / 2, WORLDSIZE / 2)
+    print >>outfile, plot_field(sigmaX,sigmaY,rho,muX,muY)
 
