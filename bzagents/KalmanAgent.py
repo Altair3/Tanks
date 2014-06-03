@@ -52,9 +52,7 @@ class KalmanAgent(object):
         
         return deltaX, deltaY
         
-    def tick(self):
-        start_time = time.time()
-      
+    def tick(self):      
         mytanks, othertanks, flags, shots = self.bzrc.get_lots_o_stuff()
         
         ''' list of teammates with velocities and position and flag posession etc. '''
@@ -82,7 +80,7 @@ class KalmanAgent(object):
         if distance > 450:
             return
         
-        pred = (distance/float(self.constants['shotspeed']))*2
+        pred = (distance/float(self.constants['shotspeed']))*(1.0/t)
         pred = int(pred+1)
         MuPred,SigmaPred = self.Kfilter.predictiveKalman(Mu,Sigma,pred)
         targetX,targetY = MuPred.item((0,0)),MuPred.item((3,0))
@@ -105,10 +103,6 @@ class KalmanAgent(object):
         #print "sigmaX and Y", sigmaX,sigmaY
         #print "rho" , rho
         plotter.plot(sigmaX,sigmaY,0,enemyX,enemyY)
-        
-        end_time = time.time()
-        
-        print "TIME: ", (end_time-start_time)
         
         return True                    
                 
@@ -268,7 +262,7 @@ def main():
         while True:
             
             time_diff = time.time() - prev_time
-            if(time_diff >= .5):
+            if(time_diff >= t):
                 prev_time = time.time()              
                 agent.tick()
                 count += 1
