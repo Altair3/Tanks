@@ -13,7 +13,7 @@ from bzrc import BZRC, Command
 from obstacle import Obstacle
 from geo import Point, Line
 import KalmanPlotter as plotter
-t = .5
+t = .4
 class KalmanAgent(object):
     
     def __init__(self, bzrc):
@@ -89,9 +89,9 @@ class KalmanAgent(object):
         theta = math.atan2(deltaY,deltaX)
         theta = self.normalize_angle(theta-tank.angle)
         
-        distance = Point(tank.x, tank.y).distance(Point(targetX,targetY))
+        #distance = Point(tank.x, tank.y).distance(Point(targetX,targetY))
         
-        if distance <= 370 and (theta < 0.1 and theta > -0.1):
+        if distance <= 390 and (theta < 0.1 and theta > -0.1):
             shoot = True
         else:
             shoot = False
@@ -235,8 +235,8 @@ class Calculations(object):
     def reset(self):
         self.SigmaCurrent = self.SigmaKnot
         self.SigmaPrev = self.SigmaKnot
-        #self.MuCurrent = self.MuKnot
-        self.MuPrev = self.MuCurrent#self.MuKnot
+        self.MuCurrent = self.MuKnot
+        self.MuPrev = self.MuKnot
 
 def main():
     # Process CLI arguments.
