@@ -30,7 +30,6 @@ class PigeonAgent(object):
                 self.bzrc.speed(i, self.const_velocity)
         elif self.mode == "wild":
             for i in range(self.num_tanks):
-                #self.mytanks = self.bzrc.get_mytanks()
                 if (time - self.time_move) > self.move_interval:
                     for i in range(self.num_tanks):
                         speed = self.getRandomSpeed()
