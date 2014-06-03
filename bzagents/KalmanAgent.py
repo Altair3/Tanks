@@ -13,7 +13,7 @@ from bzrc import BZRC, Command
 from obstacle import Obstacle
 from geo import Point, Line
 import KalmanPlotter as plotter
-t = .4
+t = .5
 class KalmanAgent(object):
     
     def __init__(self, bzrc):
@@ -123,20 +123,20 @@ class Calculations(object):
                             [0,0,0,0,0,1]])
         self.SigmaS = np.matrix([[.1,0,0,0,0,0],
                                 [0,.1,0,0,0,0,],
-                                [0,0,25,0,0,0],
+                                [0,0,50,0,0,0],
                                 [0,0,0,.1,0,0],
                                 [0,0,0,0,.1,0],
-                                [0,0,0,0,0,25]])
+                                [0,0,0,0,0,50]])
         self.H = np.matrix([[1,0,0,0,0,0],
                             [0,0,0,1,0,0]])
         self.SigmaE = np.matrix([[25,0],[0,25]])
         self.FTrans = self.F.transpose()
         self.HTrans = self.H.transpose()
         self.MuKnot = np.matrix([[210],[0],[0],[0],[0],[0]])
-        self.SigmaKnot = np.matrix([[50,0,0,0,0,0],
+        self.SigmaKnot = np.matrix([[100,0,0,0,0,0],
                                     [0,.1,0,0,0,0],
                                     [0,0,.1,0,0,0],
-                                    [0,0,0,50,0,0],
+                                    [0,0,0,100,0,0],
                                     [0,0,0,0,.1,0],
                                     [0,0,0,0,0,.1]])
         self.SigmaCurrent = self.SigmaKnot
@@ -144,7 +144,7 @@ class Calculations(object):
         self.MuCurrent = self.MuKnot
         self.MuPrev = self.MuKnot
     
-    '''runs the filter but predicts out into the future, @param iterations down the markov
+    '''runs the filter but predicts out into the future @param iterations down the markov
     chain. Returns the new predicted Mu and Sigma for use in plotting, etc. '''
     def predictiveKalman(self,Mu,Sigma,iterations):
         if(iterations == 0):
