@@ -1,4 +1,6 @@
 import sys
+import time
+from os import listdir
 
 posList = ["$", "``", "\"", "(", ")", ",", "--", ".", ":", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
 
@@ -15,7 +17,7 @@ class PartOfSpeech(object):
         example: {[dog]=4} means that dog has appeared 4 times for this POS
         '''
         self.emissionMap = {}
-        totalEmissions = 0
+        self.totalEmissions = 0
         
         self.emissionProbMap = {}
         
@@ -26,7 +28,7 @@ class PartOfSpeech(object):
         exampe: {[DT]=4} means that a determiner (DT) followed this POS 4 times
         '''
         self.transitionMap = {}
-        totalTransitions = 0
+        self.totalTransitions = 0
         
         self.transitionProbMap = {}
         
@@ -53,19 +55,20 @@ class PosParser(object):
         prevPosName = ""
     
         for token in data:
-            token = self.cleanToken(token)
+            token = self.cleanToken(token, posState)
             #the previous token was a POS tag
             if posState == True:
                 if token in self.posMaps[posName].emissionMap:
                     self.posMaps[posName].emissionMap[token] += 1
                 else:
                     self.posMaps[posName].emissionMap[token] = 1
+                self.posMaps[posName].totalEmissions += 1
                 posState = False
                 prevPosName = posName
             #the previous token was not a POS tag
             else:
                 if token in posList:
-                    posState = False
+                    posState = True
                     posName = token
                     
                     if prevPosName != "":
@@ -73,21 +76,66 @@ class PosParser(object):
                             self.posMaps[prevPosName].transitionMap[posName] += 1
                         else:
                             self.posMaps[prevPosName].transitionMap[posName] = 1
-                
-    def cleanToken(self, token):
+                        self.posMaps[prevPosName].totalTransitions += 1    
+                            
+        f.close()
+    
+    '''
+    Cleans the token of extra parentheses.
+    token: string, the word or tag being cleaned
+    posState: boolean, True = the previous token was a valid tag, False = otherwise
+    '''
+    def cleanToken(self, token, posState):
+        if len(token) == 0:
+            return ""
+        
         if token[0] == "(":
             token = token[1:]
-        if token[-1] == ")":
+        
+        if len(token) == 0:
+            return ""
+            
+        if token[len(token)-1] == ")":
             token = token[:-1]
             
+        if token == ")" and posState == False:
+            token = ""
+        
         return token
+    
+    '''
+    rootFolder: the folder containing the folders with the .mrg files
+    in this project, rootFolder is "../assignment3"
+    '''
+    def ParseItAll(self, rootFolder):
+        
+        folders = [ f for f in listdir(rootFolder)]
+        numFolders = len(folders)
+        
+        startTime = time.time()
+        
+        trainCount = 0
+        
+        for folder in folders:
+            path = rootFolder + folder + "/"
+            
+            for file in listdir(path):
+                fileName = path + file
+                
+                parser.parseFile(fileName)
+                
+            trainCount += 1
+            print("Finished training:", folder, "(", str(trainCount), "/", str(numFolders), ")")
+            
+        endTime = time.time()
+            
+        print("Finished training. Total time:", str(endTime-startTime), "seconds") 
         
 if __name__ == '__main__':
     
     parser = PosParser()
     
-    parser.parseFile("wsj_0201.mrg")
+    parser.ParseItAll("../assignment3/")
     
-    f.close()
-        
+    #parser.parseFile("wsj_0201.mrg")
         
