@@ -37,23 +37,56 @@ class PosParser(object):
     
     def __init__(self):
         
-        self.PosMaps = {}
+        self.posMaps = {}
         
         for p in posList:
-            self.PosMaps[p] = PartOfSpeech(p)
+            self.posMaps[p] = PartOfSpeech(p)
+            
+    def parseFile(self, fileName):
+        
+        f = open(fileName, 'r')
+        data = f.read()
+        data = data.split()
+    
+        posState = False
+        posName = ""
+        prevPosName = ""
+    
+        for token in data:
+            token = self.cleanToken(token)
+            #the previous token was a POS tag
+            if posState == True:
+                if token in self.posMaps[posName].emissionMap:
+                    self.posMaps[posName].emissionMap[token] += 1
+                else:
+                    self.posMaps[posName].emissionMap[token] = 1
+                posState = False
+                prevPosName = posName
+            #the previous token was not a POS tag
+            else:
+                if token in posList:
+                    posState = False
+                    posName = token
+                    
+                    if prevPosName != "":
+                        if posName in self.posMaps[prevPosName].transitionMap:
+                            self.posMaps[prevPosName].transitionMap[posName] += 1
+                        else:
+                            self.posMaps[prevPosName].transitionMap[posName] = 1
+                
+    def cleanToken(self, token):
+        if token[0] == "(":
+            token = token[1:]
+        if token[-1] == ")":
+            token = token[:-1]
+            
+        return token
         
 if __name__ == '__main__':
     
     parser = PosParser()
     
-    f = open("wsj_0201.mrg", 'r')
-    
-    data = f.read()
-    
-    data = data.split()
-    
-    for token in data:
-        
+    parser.parseFile("wsj_0201.mrg")
     
     f.close()
         
