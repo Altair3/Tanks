@@ -3,7 +3,7 @@ import random
 import time
 from os import listdir
 
-posList = ["#", "$", "``", "''", "(", ")", ",", "--", ".", ":", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
+posList = ["#", "$", "``", "''", ",", ".", ":", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
 
 class PartOfSpeech(object):
     
@@ -26,9 +26,11 @@ class PartOfSpeech(object):
         map
         key: the part of speech
         value: number of times the following POS was the key
-        exampe: {[DT]=4} means that a determiner (DT) followed this POS 4 times
+        example: {[DT]=4} means that a determiner (DT) followed this POS 4 times
         '''
         self.transitionMap = {}
+        for pos in posList:
+            self.transitionMap[pos] = 0
         self.totalTransitions = 0
         
         self.transitionProbMap = {}
@@ -105,6 +107,8 @@ class PosParser(object):
         for k1,v1 in self.posMaps.items():
             for k2,v2 in v1.emissionMap.items():
                 v1.emissionProbMap[k2] = (float(v2)/float(v1.totalEmissions))
+            if v1.totalTransitions == 0:
+                continue
             for k3,v3 in v1.transitionMap.items():
                 v1.transitionProbMap[k3] = (float(v3)/float(v1.totalTransitions))
     
@@ -112,7 +116,7 @@ class PosParser(object):
     rootFolder: the folder containing the folders with the .mrg files
     in this project, rootFolder is "../assignment3"
     '''
-    def ParseItAll(self, rootFolder):
+    def train(self, rootFolder):
         
         print("Beginning training")
         startTime = time.time()
@@ -139,13 +143,91 @@ class PosParser(object):
          
         self.CalculatePriors()
         self.CalculateProbabilities()
+        
+        self.start_probability = {}
+        self.transition_probability = {}
+        self.emission_probability = {}
+        for k,v in self.posMaps.items():
+            self.start_probability[k] = v.prior
+            self.transition_probability[k] = v.transitionProbMap
+            self.emission_probability[k] = v.emissionProbMap
+        
+                  
             
         endTime = time.time()
             
         print "Finished training. Total time:", str(endTime-startTime), "seconds"
+    
+    def Viterbi(self,obs):
+        V = [{}]
+        path = {}
         
+        for pos in posList:
+            if(obs[0] in self.emission_probability[pos]):
+                V[0][pos] = self.start_probability[pos] * self.emission_probability[pos][obs[0]]
+                path[pos] = [pos]
+            else:
+                V[0][pos] = 0
+                path[pos] = [pos]
+        
+        for t in range(1,len(obs)):
+            curObs = obs[t]
+            V.append({})
+            newpath = {}
+            
+            for pos in posList:
+                #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)
+                
+                if obs[t] not in self.emission_probability[pos]:
+                    V[t][pos] = 0.0
+                    continue
+                
+                xlist = []
+                
+                if t == 48:
+                    #pass
+                    #print "48"
+                
+                for pos0 in posList:
+                    
+                    if pos0 not in V[t-1]:
+                        pass
+                        #print "x"
+                    if pos not in self.transition_probability[pos0]:
+                        pass
+                        #print "y"
+                    
+                    term1 = V[t-1][pos0]
+                    term2 = self.transition_probability[pos0][pos]
+                    term3 = self.emission_probability[pos][obs[t]]
+                    
+                    total = term1 * term2 * term3
+                    
+                    xlist.append((total,pos0))
+                    #xlist.append((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0))
+                
+                (prob, state) = max(xlist)
+                
+                V[t][pos] = prob
+                if state not in path:
+                    #pass
+                    #print "p"
+                    continue
+                newpath[pos] = path[state] + [pos]
+            
+            path = newpath
+            
+        n = 0
+        if len(obs)!=1:
+            n = t
+        (prob,state) = max((V[n][pos],pos) for pos in posList)
+        return (prob,path[state])
+         
+        
+       
 class NGram(object):
     def __init__(self):
+        
         self.contextconst = [""]
         self.sentence = ""
         
@@ -168,10 +250,25 @@ class NGram(object):
             self.sentence += word + " "
         
 if __name__ == '__main__':
+    trash,parseFlag,ngramFile = sys.argv
+    if(parseFlag == "t"):
+        parser = PosParser()
+        parser.train("assignment3/")
+        f = open("assignment3/devtest.txt","r")
+        data = f.read()
+        data = data.split()
+        observation = []
+        labels = []
+        for token in data:
+            word,pos = parser.splitToken(token)
+            observation.append(word)
+            labels.append(pos)
+        
+        prob,path = parser.Viterbi(observation)
+        print "prob" , prob
+        print "path" , path
+
     
-    parser = PosParser()
-    parser.ParseItAll("assignment3/")
-    
-    ngram = NGram()
-    ngram.doIt("ngram/revelation13")
-    print(ngram.sentence)
+    #ngram = NGram()
+    #ngram.doIt("ngram/" + ngramFile)
+    #print(ngram.sentence)
