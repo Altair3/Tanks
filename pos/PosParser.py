@@ -1,10 +1,11 @@
 import sys
 import random
 import time
+import math
 from os import listdir
 
-posList = ["#", "$", "``", "''", ",", ".", ":", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
-
+posList = ["#", "$", "CC", "''", ",", ".", ":", "``", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
+SMALLNUMBER = 0
 class PartOfSpeech(object):
     
     def __init__(self, name):
@@ -55,7 +56,7 @@ class PosParser(object):
             self.posMaps[p] = PartOfSpeech(p)
             
         self.totalBeginSentences = 0
-            
+        self.trainingwords = []
     def parseFile(self, fileName):
         
         f = open(fileName, 'r')
@@ -67,6 +68,7 @@ class PosParser(object):
     
         for token in data:
             word, posName = self.splitToken(token)
+            self.trainingwords.append(word)
             if word in self.posMaps[posName].emissionMap:
                 self.posMaps[posName].emissionMap[word] += 1
             else:
@@ -101,16 +103,25 @@ class PosParser(object):
     
     def CalculatePriors(self):
         for k,v in self.posMaps.items():
-            v.prior = (float(v.numBeginSentence)/float(self.totalBeginSentences))
+            if((float(v.numBeginSentence)/float(self.totalBeginSentences)) == 0):
+                v.prior = SMALLNUMBER
+            else:
+                v.prior = math.log((float(v.numBeginSentence)/float(self.totalBeginSentences))+1)
             
     def CalculateProbabilities(self):
         for k1,v1 in self.posMaps.items():
             for k2,v2 in v1.emissionMap.items():
-                v1.emissionProbMap[k2] = (float(v2)/float(v1.totalEmissions))
+                if((float(v2)/float(v1.totalEmissions) ==0)):
+                    v1.emissionProbMap[k2] = SMALLNUMBER
+                else:
+                    v1.emissionProbMap[k2] = math.log((float(v2)/float(v1.totalEmissions))+1)
             if v1.totalTransitions == 0:
                 continue
             for k3,v3 in v1.transitionMap.items():
-                v1.transitionProbMap[k3] = (float(v3)/float(v1.totalTransitions))
+                if((float(v3)/float(v1.totalTransitions) == 0)):
+                    v1.transitionProbMap[k3] = SMALLNUMBER
+                else:
+                    v1.transitionProbMap[k3] = math.log((float(v3)/float(v1.totalTransitions))+1)
     
     '''
     rootFolder: the folder containing the folders with the .mrg files
@@ -164,14 +175,18 @@ class PosParser(object):
         
         for pos in posList:
             if(obs[0] in self.emission_probability[pos]):
-                V[0][pos] = self.start_probability[pos] * self.emission_probability[pos][obs[0]]
+                V[0][pos] = self.start_probability[pos] + self.emission_probability[pos][obs[0]]
                 path[pos] = [pos]
             else:
-                V[0][pos] = 0
+                V[0][pos] = SMALLNUMBER
                 path[pos] = [pos]
         
         for t in range(1,len(obs)):
             curObs = obs[t]
+            if curObs not in self.trainingwords:
+                print "curobs" , curObs
+                V.append({})
+                continue
             V.append({})
             newpath = {}
             
@@ -179,15 +194,11 @@ class PosParser(object):
                 #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)
                 
                 if obs[t] not in self.emission_probability[pos]:
-                    V[t][pos] = 0.0
+                    V[t][pos] = SMALLNUMBER
                     continue
                 
                 xlist = []
-                
-                if t == 48:
-                    #pass
-                    #print "48"
-                
+
                 for pos0 in posList:
                     
                     if pos0 not in V[t-1]:
@@ -201,25 +212,27 @@ class PosParser(object):
                     term2 = self.transition_probability[pos0][pos]
                     term3 = self.emission_probability[pos][obs[t]]
                     
-                    total = term1 * term2 * term3
+                    total = term1 + term2 + term3
                     
                     xlist.append((total,pos0))
                     #xlist.append((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0))
                 
                 (prob, state) = max(xlist)
-                
+          
                 V[t][pos] = prob
                 if state not in path:
                     #pass
+                    
                     #print "p"
                     continue
                 newpath[pos] = path[state] + [pos]
-            
+          
             path = newpath
             
         n = 0
         if len(obs)!=1:
             n = t
+        map = V[n]
         (prob,state) = max((V[n][pos],pos) for pos in posList)
         return (prob,path[state])
          
