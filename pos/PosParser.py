@@ -49,10 +49,19 @@ class PartOfSpeech(object):
         
 class PosParser(object):
     
-    def __init__(self):
-        
+    def __init__(self,order):
+        self.order = order
         self.posMaps = {}
-        
+        self.posList2 = []
+        if(self.order == 2):
+            #create a combination list
+            for p in posList:
+                for p2 in posList:
+                    pair = str(p + ", " + p2)
+                    self.posList2.append(pair)
+        if(self.order == 1):
+            self.posList2 = posList
+                
         for p in posList:
             self.posMaps[p] = PartOfSpeech(p)
             
@@ -182,21 +191,16 @@ class PosParser(object):
                 V[0][pos] = SMALLNUMBER
                 path[pos] = [pos]
         
-        for t in range(1,len(obs)):            
+        for t in range(1,len(obs)):
             V.append({})
             newpath = {}
             for pos in posList:
-                #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)                      
+                                 
                 xlist = []
 
-                for pos0 in posList:
+                for pos0 in self.posList2:
                     
-                    if pos0 not in V[t-1]:
-                        pass
-                        #print "x"
-                    if pos not in self.transition_probability[pos0]:
-                        pass
-                        #print "y"
+                    
                     if obs[t] not in self.emission_probability[pos]:
                         term1 = V[t-1][pos0]
                         term2 = self.transition_probability[pos0][pos]
@@ -209,7 +213,7 @@ class PosParser(object):
                         total = term1 + term2 + term3
                     
                     xlist.append((total,pos0))
-                    #xlist.append((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0))
+                    
                 
                 (prob, state) = max(xlist)
           
@@ -257,9 +261,9 @@ class NGram(object):
             self.sentence += word + " "
         
 if __name__ == '__main__':
-    trash,parseFlag,ngramFile = sys.argv
+    trash,parseFlag,ngramFile,order = sys.argv
     if(parseFlag == "t"):
-        parser = PosParser()
+        parser = PosParser(int(order))
         parser.train("assignment3/")
         f = open("assignment3/devtest.txt","r")
         data = f.read()
