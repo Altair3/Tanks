@@ -41,7 +41,6 @@ class PosParser(object):
         for p in posList:
             self.posMaps[p] = PartOfSpeech(p)
             
-        self.totalBeginSentences = 0
         self.trainingwords = []
         
         '''
@@ -104,11 +103,22 @@ class PosParser(object):
                 self.totalTransitions[prevPosNamesString] += 1
             
             context = self.getContextString(prevPosNames, self.contextLength)
+            
+            if self.contextLength == 1:
+                if context == "." or context == "":
+                    if posName not in self.beginSentences:
+                        self.beginSentences[posName] = 0
+                    self.beginSentences[posName] +=1 
+                    self.numBeginSentence += 1
+            else:
+                if context != "" and prevPosNames[0] == ".":
+                    newContext = [prevPosNames[1], posName]
+                    context = self.getContextString(newContext, self.contextLength)
                     
-            if context != "" and prevPosNames[0] == ".":
-                if context not in self.beginSentences:
-                    self.beginSentences[context] = 0
-                self.beginSentences[context] += 1
+                    if context not in self.beginSentences:
+                        self.beginSentences[context] = 0
+                    self.beginSentences[context] += 1
+                    self.numBeginSentence += 1
             
             if self.contextLength == 1:
                 prevPosNames[0] = posName
@@ -145,11 +155,11 @@ class PosParser(object):
         return prevPosNamesString
     
     def CalculatePriors(self):
-        for k,v in self.posMaps.items():
-            if((float(v.numBeginSentence)/float(self.totalBeginSentences)) == 0):
-                v.prior = SMALLNUMBER
+        for k,v in self.beginSentences.items():
+            if((float(v)/float(self.numBeginSentence)) == 0):
+                self.priors[k] = SMALLNUMBER
             else:
-                v.prior = math.log((float(v.numBeginSentence)/float(self.totalBeginSentences))+1)
+                self.priors[k] = math.log((float(v)/float(self.numBeginSentence)))
             
     def CalculateProbabilities(self):
         for k1,v1 in self.posMaps.items():
@@ -158,14 +168,15 @@ class PosParser(object):
                     v1.emissionProbMap[k2] = SMALLNUMBER
                 else:
                     v1.emissionProbMap[k2] = math.log((float(v2)/float(v1.totalEmissions))+1)
-        for k3, v3 in self.transitionMap:
-            if v1.totalTransitions == 0:
-                continue
-            for k3,v3 in v1.transitionMap.items():
-                if((float(v3)/float(v1.totalTransitions) == 0)):
-                    v1.transitionProbMap[k3] = SMALLNUMBER
+        
+        for context, posMap in self.transitionMap.items():
+            if context not in self.transitionProbMap:
+                self.transitionProbMap[context] = {}
+            for posName, value in posMap.items():
+                if (float(value)/float(self.totalTransitions[context])) == 0:
+                    self.transitionProbMap[context][posName] = SMALLNUMBER
                 else:
-                    v1.transitionProbMap[k3] = math.log((float(v3)/float(v1.totalTransitions))+1)
+                    self.transitionProbMap[context][posName] = math.log((float(value)/float(self.totalTransitions[context])))
     
     '''
     rootFolder: the folder containing the folders with the .mrg files
@@ -183,10 +194,15 @@ class PosParser(object):
         
         self.start_probability = {}
         self.transition_probability = {}
+        
+        for k,v in self.priors.items():
+            self.start_probability[k] = v
+            
+        for context,posMap in self.transitionProbMap.items():
+            self.transition_probability[context] = posMap
+            
         self.emission_probability = {}
         for k,v in self.posMaps.items():
-            self.start_probability[k] = v.prior
-            self.transition_probability[k] = v.transitionProbMap
             self.emission_probability[k] = v.emissionProbMap
             
         endTime = time.time()
