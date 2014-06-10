@@ -4,8 +4,8 @@ import time
 import math
 from os import listdir
 
-posList = ["#", "$", "CC", "''", ",", ".", ":", "``", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
-SMALLNUMBER = 0
+posList = ["#", "$", "''", ",", ".", ":", "``", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
+SMALLNUMBER = -1
 class PartOfSpeech(object):
     
     def __init__(self, name):
@@ -24,8 +24,23 @@ class PartOfSpeech(object):
         self.emissionProbMap = {}
         
         '''
+        map
+        key: the part of speech
+        value: number of times the following POS was the key
+        example: {[DT]=4} means that a determiner (DT) followed this POS 4 times
+        '''
+        self.transitionMap = {}
+        for pos in posList:
+            self.transitionMap[pos] = 0
+        self.totalTransitions = 0
+        
+        self.transitionProbMap = {}
+        
+        '''
         used to calculate prior
         '''
+        self.numBeginSentence = 0
+        self.prior = None
         
         
     def leppard(self):
@@ -33,54 +48,25 @@ class PartOfSpeech(object):
         
 class PosParser(object):
     
-    def __init__(self, contextLength):
+    def __init__(self):
         
         self.posMaps = {}
-        self.contextLength = contextLength
         
         for p in posList:
             self.posMaps[p] = PartOfSpeech(p)
             
+        self.totalBeginSentences = 0
         self.trainingwords = []
-        
-        '''
-        map
-        key: the context
-        value: number of times the key began a sentence
-        example: {["DT, NN"] = 4} means that a determiner (DT) followed by a noun (NN) began a sentence 4 times
-        '''
-        self.beginSentences = {}
-        self.numBeginSentence = 0
-        self.priors = {}
-        
-        '''
-        map
-        key: the context
-        value: number of times the following POS was the key
-        example: {["DT, NN"] = {NN: 4}} means that a determiner (DT) followed by a noun (NN) preceded a NN 4 times
-        '''
-        self.transitionMap = {}
-        self.totalTransitions = {}
-        
-        self.transitionProbMap = {}
-        
-        
     def parseFile(self, fileName):
         
         f = open(fileName, 'r')
         data = f.read()
         data = data.split()
     
-        prevPosNames = []
-        
-        for i in range(self.contextLength):
-            prevPosNames.append(None)         
+        posName = ""
+        prevPosName = None
     
         for token in data:
-            prevPosNamesString = ""
-            if None not in prevPosNames:
-                prevPosString = self.getContextString(prevPosNames, self.contextLength)
-            
             word, posName = self.splitToken(token)
             self.trainingwords.append(word)
             if word in self.posMaps[posName].emissionMap:
@@ -88,43 +74,19 @@ class PosParser(object):
             else:
                 self.posMaps[posName].emissionMap[word] = 1
             self.posMaps[posName].totalEmissions += 1
-            
-            if None not in prevPosNames:
-                if prevPosNamesString not in self.transitionMap:
-                    self.transitionMap[prevPosNamesString] = {}
-            
-                if posName in self.transitionMap[prevPosNamesString]:
-                    self.transitionMap[prevPosNamesString][posName] += 1
+                
+            if prevPosName != None:
+                if posName in self.posMaps[prevPosName].transitionMap:
+                    self.posMaps[prevPosName].transitionMap[posName] += 1
                 else:
-                    self.transitionMap[prevPosNamesString][posName] = 1
-                    
-                if prevPosNamesString not in self.totalTransitions:
-                    self.totalTransitions[prevPosNamesString] = 0
-                self.totalTransitions[prevPosNamesString] += 1
+                    self.posMaps[prevPosName].transitionMap[posName] = 1
+                self.posMaps[prevPosName].totalTransitions += 1
             
-            context = self.getContextString(prevPosNames, self.contextLength)
+            if (prevPosName == None) or (prevPosName == "."):
+                self.posMaps[posName].numBeginSentence += 1
+                self.totalBeginSentences += 1
             
-            if self.contextLength == 1:
-                if context == "." or context == "":
-                    if posName not in self.beginSentences:
-                        self.beginSentences[posName] = 0
-                    self.beginSentences[posName] +=1 
-                    self.numBeginSentence += 1
-            else:
-                if context != "" and prevPosNames[0] == ".":
-                    newContext = [prevPosNames[1], posName]
-                    context = self.getContextString(newContext, self.contextLength)
-                    
-                    if context not in self.beginSentences:
-                        self.beginSentences[context] = 0
-                    self.beginSentences[context] += 1
-                    self.numBeginSentence += 1
-            
-            if self.contextLength == 1:
-                prevPosNames[0] = posName
-            else:
-                prevPosNames[0] = prevPosNames[1]
-                prevPosNames[1] = posName
+            prevPosName = posName            
                             
         f.close()
     
@@ -139,27 +101,12 @@ class PosParser(object):
         
         return word, posName
     
-    '''
-    contextList: a list of strings that are POSs
-    contextLength: the length of the list
-    '''
-    def getContextString(self, contextList, contextLength):
-        if None in contextList:
-            return ""
-        prevPosNamesString = ""
-        for i in range(contextLength):
-            prevPosNamesString += contextList[i]
-            if i != (contextLength-1):
-                prevPosNamesString += ", "
-                
-        return prevPosNamesString
-    
     def CalculatePriors(self):
-        for k,v in self.beginSentences.items():
-            if((float(v)/float(self.numBeginSentence)) == 0):
-                self.priors[k] = SMALLNUMBER
+        for k,v in self.posMaps.items():
+            if((float(v.numBeginSentence)/float(self.totalBeginSentences)) == 0):
+                v.prior = SMALLNUMBER
             else:
-                self.priors[k] = math.log((float(v)/float(self.numBeginSentence)))
+                v.prior = math.log((float(v.numBeginSentence)/float(self.totalBeginSentences))+1)
             
     def CalculateProbabilities(self):
         for k1,v1 in self.posMaps.items():
@@ -168,15 +115,13 @@ class PosParser(object):
                     v1.emissionProbMap[k2] = SMALLNUMBER
                 else:
                     v1.emissionProbMap[k2] = math.log((float(v2)/float(v1.totalEmissions))+1)
-        
-        for context, posMap in self.transitionMap.items():
-            if context not in self.transitionProbMap:
-                self.transitionProbMap[context] = {}
-            for posName, value in posMap.items():
-                if (float(value)/float(self.totalTransitions[context])) == 0:
-                    self.transitionProbMap[context][posName] = SMALLNUMBER
+            if v1.totalTransitions == 0:
+                continue
+            for k3,v3 in v1.transitionMap.items():
+                if((float(v3)/float(v1.totalTransitions) == 0)):
+                    v1.transitionProbMap[k3] = SMALLNUMBER
                 else:
-                    self.transitionProbMap[context][posName] = math.log((float(value)/float(self.totalTransitions[context])))
+                    v1.transitionProbMap[k3] = math.log((float(v3)/float(v1.totalTransitions))+1)
     
     '''
     rootFolder: the folder containing the folders with the .mrg files
@@ -187,6 +132,24 @@ class PosParser(object):
         print("Beginning training")
         startTime = time.time()
         
+        '''
+        folders = [ f for f in listdir(rootFolder)]
+        numFolders = len(folders)
+        
+        trainCount = 0
+        
+        for folder in folders:
+            path = rootFolder + folder + "/"
+            
+            for file in listdir(path):
+                fileName = path + file
+                
+                self.parseFile(fileName)
+                
+            trainCount += 1
+            print("Finished training:", folder, "(", str(trainCount), "/", str(numFolders), ")")
+        '''
+        
         self.parseFile(rootFolder + "allTraining.txt")
          
         self.CalculatePriors()
@@ -194,21 +157,17 @@ class PosParser(object):
         
         self.start_probability = {}
         self.transition_probability = {}
-        
-        for k,v in self.priors.items():
-            self.start_probability[k] = v
-            
-        for context,posMap in self.transitionProbMap.items():
-            self.transition_probability[context] = posMap
-            
         self.emission_probability = {}
         for k,v in self.posMaps.items():
+            self.start_probability[k] = v.prior
+            self.transition_probability[k] = v.transitionProbMap
             self.emission_probability[k] = v.emissionProbMap
+        
+                  
             
         endTime = time.time()
             
         print "Finished training. Total time:", str(endTime-startTime), "seconds"
-        print self.transition_probability
     
     def Viterbi(self,obs):
         V = [{}]
@@ -222,21 +181,15 @@ class PosParser(object):
                 V[0][pos] = SMALLNUMBER
                 path[pos] = [pos]
         
-        for t in range(1,len(obs)):
-            curObs = obs[t]
-            if curObs not in self.trainingwords:
-                print "curobs" , curObs
-                V.append({})
-                continue
+        for t in range(1,len(obs)):            
             V.append({})
             newpath = {}
-            
+            if(obs[t] == "thinks"):
+                    print obs[t]
             for pos in posList:
                 #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)
                 
-                if obs[t] not in self.emission_probability[pos]:
-                    V[t][pos] = SMALLNUMBER
-                    continue
+                
                 
                 xlist = []
 
@@ -248,12 +201,16 @@ class PosParser(object):
                     if pos not in self.transition_probability[pos0]:
                         pass
                         #print "y"
-                    
-                    term1 = V[t-1][pos0]
-                    term2 = self.transition_probability[pos0][pos]
-                    term3 = self.emission_probability[pos][obs[t]]
-                    
-                    total = term1 + term2 + term3
+                    if obs[t] not in self.emission_probability[pos]:
+                        term1 = V[t-1][pos0]
+                        term2 = self.transition_probability[pos0][pos]
+                        total = term1 + term2 + SMALLNUMBER
+                        
+                    else:
+                        term1 = V[t-1][pos0]
+                        term2 = self.transition_probability[pos0][pos]
+                        term3 = self.emission_probability[pos][obs[t]]                   
+                        total = term1 + term2 + term3
                     
                     xlist.append((total,pos0))
                     #xlist.append((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0))
@@ -304,9 +261,9 @@ class NGram(object):
             self.sentence += word + " "
         
 if __name__ == '__main__':
-    trash,parseFlag,ngramFile, contextLength = sys.argv
+    trash,parseFlag,ngramFile = sys.argv
     if(parseFlag == "t"):
-        parser = PosParser(int(contextLength))
+        parser = PosParser()
         parser.train("assignment3/")
         f = open("assignment3/devtest.txt","r")
         data = f.read()
@@ -321,8 +278,3 @@ if __name__ == '__main__':
         prob,path = parser.Viterbi(observation)
         print "prob" , prob
         print "path" , path
-
-    
-    #ngram = NGram()
-    #ngram.doIt("ngram/" + ngramFile)
-    #print(ngram.sentence)
