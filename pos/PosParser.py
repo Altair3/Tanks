@@ -233,11 +233,10 @@ class PosParser(object):
                         
                         if pos not in self.transition_probability[pos0]:
                             
-                            continue
+                            term2 = SMALLNUMBER
                         else:
                             term2 = self.transition_probability[pos0][pos] 
                                                                              
-                            
                         for pos2 in posList:
                             term1 = V[t-1][pos2]                                           
                             total = term1 + term2 + term3                          
