@@ -166,33 +166,11 @@ class PosParser(object):
                     else:
                        
                         self.transitionProbMap[context][posName] = math.log((float(value)/float(self.totalTransitions[context]))+1)
-    
-    '''
-    rootFolder: the folder containing the folders with the .mrg files
-    in this project, rootFolder is "../assignment3"
-    '''
+                        
     def train(self, rootFolder):
         
         print("Beginning training")
         startTime = time.time()
-        
-        '''
-        folders = [ f for f in listdir(rootFolder)]
-        numFolders = len(folders)
-        
-        trainCount = 0
-        
-        for folder in folders:
-            path = rootFolder + folder + "/"
-            
-            for file in listdir(path):
-                fileName = path + file
-                
-                self.parseFile(fileName)
-                
-            trainCount += 1
-            print("Finished training:", folder, "(", str(trainCount), "/", str(numFolders), ")")
-        '''
         
         self.parseFile(rootFolder + "allTraining.txt")
          
@@ -202,14 +180,25 @@ class PosParser(object):
         self.start_probability = {}
         self.transition_probability = {}
         
+        listOfRemovedCrap = []
         for context in self.posList2:
-            self.transition_probability[context] = self.transitionProbMap[context]
+            
+            if self.transitionProbMap[context]:
+                self.transition_probability[context] = self.transitionProbMap[context]
+            else:
+                listOfRemovedCrap.append(context)
+        for i in listOfRemovedCrap:
+            self.posList2.remove(i)
+            
+        print "After removal:", len(self.posList2)
         
         self.emission_probability = {}
         for k,v in self.posMaps.items():
             self.start_probability[k] = v.prior
             
             self.emission_probability[k] = v.emissionProbMap
+            
+        
         
         endTime = time.time()
             
