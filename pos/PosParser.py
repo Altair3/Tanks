@@ -3,6 +3,7 @@ import random
 import time
 import math
 from os import listdir
+from token import STAR
 
 posList = ["#", "$", "''", ",", ".", ":", "``", "CC", "CD", "DT", "EX", "FW", "IN", "JJ", "JJR", "JJS", "LS", "MD", "NN", "NNP", "NNPS", "NNS", "PDT", "POS", "PRP", "PRP$", "RB", "RBR", "RBS", "RP", "SYM", "TO", "UH", "VB", "VBD", "VBG", "VBN", "VBP", "VBZ", "WDT", "WP", "WP$", "WRB"]
 SMALLNUMBER = -1
@@ -184,13 +185,8 @@ class PosParser(object):
         for t in range(1,len(obs)):            
             V.append({})
             newpath = {}
-            if(obs[t] == "thinks"):
-                    print obs[t]
             for pos in posList:
-                #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)
-                
-                
-                
+                #(prob,state) = max((V[t-1][pos0] * self.transition_probability[pos0][pos] * self.emission_probability[pos][obs[t]],pos0) for pos0 in posList)                      
                 xlist = []
 
                 for pos0 in posList:
@@ -274,7 +270,15 @@ if __name__ == '__main__':
             word,pos = parser.splitToken(token)
             observation.append(word)
             labels.append(pos)
-        
+        starttime = time.time()
         prob,path = parser.Viterbi(observation)
+        end = time.time()
+        print end-starttime
+        accuracy = 0
+        for i in range(len(labels)):
+            if labels[i] == path[i]:
+                accuracy += 1
+        
+        print "accuracy" , str(float(accuracy)/len(labels))
         print "prob" , prob
-        print "path" , path
+        
