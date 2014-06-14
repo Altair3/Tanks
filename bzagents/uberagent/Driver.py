@@ -18,13 +18,19 @@ class Driver(object):
     def tick(self,tanks,bzrc):
         
         mytanks = bzrc.get_mytanks()
-        self.grid = self.tanks[9].grid
+       
                 
         for i in range(len(tanks)):
             tanks[i].update(mytanks[i])
-            if tanks[i].__class__.__name__ == "SuperUberAgent":
-                tanks[i].updateGrid(self.grid)
-            tanks[i].tick()
+        
+        if self.tanks[9].tank.status != "dead":
+			self.grid = self.tanks[9].grid
+			
+        for i in range(len(tanks)):				
+			if tanks[i].__class__.__name__ == "SuperUberAgent":
+				tanks[i].updateGrid(self.grid)
+			tanks[i].tick()
+		
 
     
     

@@ -8,7 +8,8 @@ import Calculations as fields
 
 from geo import Point, Line
 from bzrc import BZRC, Command
-
+from Kalman import Kalman
+t = .5
 class SuperUberAgent(object):
     
     def __init__(self, bzrc,tank,job):
@@ -35,8 +36,52 @@ class SuperUberAgent(object):
         self.time = time.time()
         self.locationList = []
         self.oldlocation = []
+        
 
         self.mytanks = self.bzrc.get_mytanks()
+        
+    def angle(self,tank,target):
+        angle = math.atan2((target.y-tank.y),(target.x-tank.x))
+        return angle
+    
+    def getDeltaXY(self, tank, enemy):
+        theta = self.angle(tank, enemy)
+        distance = Point(tank.x, tank.y).distance(Point(enemy.x,enemy.y))
+        
+        deltaX = distance*math.cos(theta)
+        deltaY = distance*math.sin(theta)
+        
+        return deltaX, deltaY
+        
+    def doKalman(self,X,Y):
+        self.Kfilter = Kalman(X,Y)
+        Mu,Sigma = self.Kfilter.runKalman(self.bzrc)
+       
+        enemyX = Mu.item((0,0))
+        enemyY = Mu.item((3,0))
+        
+        distance = Point(self.tank.x, self.tank.y).distance(Point(enemyX,enemyY))
+        
+        if distance > 450:
+            return
+        
+        pred = (distance/float(self.constants['shotspeed']))*(1.0/t)
+        pred = int(pred+1)
+        MuPred,garbage = self.Kfilter.predictiveKalman(Mu,Sigma,pred)
+        targetX,targetY = MuPred.item((0,0)),MuPred.item((3,0))
+        deltaX, deltaY = self.getDeltaXY(self.tank,Point(targetX,targetY))
+        
+        theta = math.atan2(deltaY,deltaX)
+        theta = self.normalize_angle(theta-self.tank.angle)
+        
+        #distance = Point(tank.x, tank.y).distance(Point(targetX,targetY))
+        
+        if distance <= 390 and (theta < 0.1 and theta > -0.1):
+            shoot = True
+        else:
+            shoot = False
+        
+        self.kalmanCommand(deltaX, deltaY, theta, shoot, self.tank)
     
     def update(self,tank):
         self.tank = tank
@@ -54,8 +99,8 @@ class SuperUberAgent(object):
         i = 0
         for flag in flags:
             if flag.color == self.constants['team']:
-				self.enemyFlag = i + 1 % len(flags)  
-				return i
+                self.enemyFlag = (i + 1) % len(flags)  
+                return i
             
             self.enemyFlag = i
             i += 1
@@ -123,19 +168,39 @@ class SuperUberAgent(object):
         return angle
         
     def sendCommand(self,totalX,totalY,tank):
-        shoot = True
+        othertanks = self.bzrc.get_othertanks()
+        me = Point(tank.x,tank.y)      
+        
+        cur = 100000
+        mins = 100000
+        enemy = Point(0,0)
+        for other in othertanks:
+            cur = Point(other.x,other.y).distance(me)
+            if (cur < mins):
+                mins = cur
+                enemy = other
+            
+        if mins <= 300:
+            self.doKalman(enemy.x, enemy.y)
+            
+        else:
      
-        theta = math.atan2(totalY,totalX)
-        theta = self.normalize_angle(theta-tank.angle)
+            theta = math.atan2(totalY,totalX)
+            theta = self.normalize_angle(theta-tank.angle)
 
+            speed = math.sqrt(totalY**2+totalX**2)
+
+            self.commands = []
+            command = Command(tank.index,.15*speed,.85*theta,False)
+            self.commands.append(command)
+            self.bzrc.do_commands(self.commands)
+            self.commands = []
+        
+    def kalmanCommand(self,totalX,totalY,theta,shoot,tank):
         speed = math.sqrt(totalY**2+totalX**2)
-
-        self.commands = []
-        command = Command(tank.index,speed,.35*theta,shoot)
+        command = Command(tank.index,.01*speed,1.15*theta,shoot)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
-        self.commands = []
-        
 
         
 

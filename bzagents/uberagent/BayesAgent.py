@@ -37,6 +37,8 @@ class BayesAgent(object):
         self.tank = tank
     
     def tick(self):
+        if self.tank.status == "dead":
+            return
         self.commands = []
         curtime = time.time()
         
