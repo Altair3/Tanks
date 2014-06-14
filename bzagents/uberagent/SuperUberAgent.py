@@ -12,6 +12,7 @@ from bzrc import BZRC, Command
 class SuperUberAgent(object):
     
     def __init__(self, bzrc,tank,job):
+        self.updatecounts = 0
         self.tank = tank
         self.bzrc = bzrc
         self.fields = fields.Calculations()
@@ -41,14 +42,22 @@ class SuperUberAgent(object):
         self.tank = tank
         
     def updateGrid(self,grid):
-        pass   
+        self.updatecounts += 1
+        if(self.updatecounts > 100):
+            return
+        else:
+            pass
+           
     
     def getFlagIndex(self):
         flags = self.bzrc.get_flags()
         i = 0
         for flag in flags:
-            if flag.color == self.constants['team']:              
-                return i
+            if flag.color == self.constants['team']:
+				self.enemyFlag = i + 1 % len(flags)  
+				return i
+            
+            self.enemyFlag = i
             i += 1
         return  
     
@@ -83,7 +92,7 @@ class SuperUberAgent(object):
             flags = self.bzrc.get_flags()
             
             if(self.tank.flag == "-"):
-                delx,dely = self.fields.getAttractiveField(self.tank, flags[1], 800, 2.5)
+                delx,dely = self.fields.getAttractiveField(self.tank, flags[self.enemyFlag], 800, 2.5)
             else:
                 delx,dely = self.fields.getAttractiveField(self.tank, self.base, 800, 40)
             # do offense
