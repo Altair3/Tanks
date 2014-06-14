@@ -19,9 +19,24 @@ class ObstacleList(object):
     def getObstaclePoints(self):
         return self.daList
         
+    def removeCornersInBlock(self, x, y, length):
+        
+        for p in self.daList:
+            pX = p.x
+            pY = p.y
+            
+            if (pX <= (x+length)) and (pX >= x):
+                if (pY <= (y+length)) and (pY >= y):
+                    self.daList.remove(p)
+        
     def scanGrid(self, startX, startY, length):
+        
+        self.removeCornersInBlock(startX, startY, length)
+        
         for x in range(startX, (startX+length+1)):
             for y in range(startY, (startY+length+1)):
+                if (x < self.xMin) or (x > self.xMax) or (y < self.yMin) or (y > self.yMax):
+                    continue
                 #print "Scanning:", "(" + str(x) + "," + str(y) + ")"
                 if self.isCorner(x,y):
                     self.daList.append(Point(x,y))

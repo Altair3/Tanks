@@ -13,6 +13,7 @@ def main():
     obsList = ObstacleList(grid)
     startTime = time.time()
     obsList.scanGrid(-300,100, 200)
+    obsList.scanGrid(-300,100, 200)
     endTime = time.time()
     
     print "Time elapsed:", str(endTime-startTime)
