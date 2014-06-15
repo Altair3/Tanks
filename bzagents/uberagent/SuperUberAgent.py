@@ -37,6 +37,8 @@ class SuperUberAgent(object):
         self.locationList = []
         self.oldlocation = []
         
+        self.startTime = time.time()
+        
 
         self.mytanks = self.bzrc.get_mytanks()
         
@@ -118,8 +120,8 @@ class SuperUberAgent(object):
     
     def tick(self):
         
-        
-        
+        if (((time.time()) - self.startTime) > 100):
+            self.job = "a"
         
         if (self.job == "d"):
             i = self.getFlagIndex()
