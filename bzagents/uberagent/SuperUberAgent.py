@@ -31,7 +31,7 @@ class SuperUberAgent(object):
             if flag.color == self.constants['team']:
                 self.flag = flag
                
-                
+        self.obstacles = []        
         #the .07125 comes from the 4 Ls world where 7.125% of the world was occupied
         self.time = time.time()
         self.locationList = []
@@ -76,7 +76,7 @@ class SuperUberAgent(object):
         
         #distance = Point(tank.x, tank.y).distance(Point(targetX,targetY))
         
-        if distance <= 390 and (theta < 0.1 and theta > -0.1):
+        if distance <= 390 and (theta < 0.2 and theta > -0.2):
             shoot = True
         else:
             shoot = False
@@ -86,12 +86,12 @@ class SuperUberAgent(object):
     def update(self,tank):
         self.tank = tank
         
-    def updateGrid(self,grid):
+    def updateObstacles(self,grid):
         self.updatecounts += 1
         if(self.updatecounts > 100):
             return
         else:
-            pass
+            self.obstacles = grid
            
     
     def getFlagIndex(self):
@@ -118,6 +118,9 @@ class SuperUberAgent(object):
     
     def tick(self):
         
+        
+        
+        
         if (self.job == "d"):
             i = self.getFlagIndex()
             
@@ -135,13 +138,25 @@ class SuperUberAgent(object):
             self.sendCommand(delx, dely, self.tank)
         if (self.job == "a"):
             flags = self.bzrc.get_flags()
-            
+            totalX=0
+            totalY = 0
+            for obstacle in self.obstacles:
+                deltaX,deltaY = self.fields.getTangentialField2(self.tank,obstacle, 100, 10, "CW")
+                totalX += deltaX
+                totalY += deltaY
             if(self.tank.flag == "-"):
-                delx,dely = self.fields.getAttractiveField(self.tank, flags[self.enemyFlag], 800, 2.5)
+                delx,dely = self.fields.getTangentialField2(self.tank,self.flag, 100,2.5,"CCW")
+                totalX += delx
+                totalY += dely
+                delx2,dely2 = self.fields.getAttractiveField(self.tank, flags[self.enemyFlag], 800, 2.5)
+                totalX += delx2
+                totalY += dely2
             else:
                 delx,dely = self.fields.getAttractiveField(self.tank, self.base, 800, 40)
+                totalX += delx
+                totalY += dely
             # do offense
-            self.sendCommand(delx, dely, self.tank)
+            self.sendCommand(totalX, totalY, self.tank)
         
         
     def goToPoint(self,tank,target):
@@ -180,7 +195,7 @@ class SuperUberAgent(object):
                 mins = cur
                 enemy = other
             
-        if mins <= 300:
+        if mins <= 200:
             self.doKalman(enemy.x, enemy.y)
             
         else:
@@ -197,10 +212,23 @@ class SuperUberAgent(object):
             self.commands = []
         
     def kalmanCommand(self,totalX,totalY,theta,shoot,tank):
+        p = Point(tank.x,tank.y)
+        for obstacle in self.obstacles:
+            if(p.distance(obstacle) < 50):
+                deltaX,deltaY = self.fields.getTangentialField2(self.tank,obstacle, 100, 40,"CW")
+                totalX = deltaX
+                totalY = deltaY
+                theta = math.atan2(totalY,totalX)
+                theta = self.normalize_angle(theta-tank.angle)
+    
+        
+                
         speed = math.sqrt(totalY**2+totalX**2)
-        command = Command(tank.index,.01*speed,1.15*theta,shoot)
+        self.commands = []
+        command = Command(tank.index,.15*speed,1.15*theta,True)
         self.commands.append(command)
         self.bzrc.do_commands(self.commands)
+        self.commands = []
 
         
 

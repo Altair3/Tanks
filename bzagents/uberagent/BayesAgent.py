@@ -11,7 +11,8 @@ from bzrc import BZRC, Command
 
 class BayesAgent(object):
     
-    def __init__(self, bzrc,tank,grid):
+    def __init__(self, bzrc,tank,grid,obsList):
+        self.ticks = 0
         self.tank = tank
         self.bzrc = bzrc
         self.fields = fields.Calculations()
@@ -23,6 +24,7 @@ class BayesAgent(object):
         self.trueNegative = float(self.constants['truenegative'])
         self.falsePositive = 1.0 - self.trueNegative
         self.grid = grid
+        self.obsList = obsList
         
         self.time = time.time()
         self.locationList = []
@@ -30,13 +32,17 @@ class BayesAgent(object):
         
        
         for i in range(10):
-            self.locationList.append(self.getRandomCoordinate(i))
+            self.locationList.append(Point(0,0))
             self.oldlocation.append(Point(self.tank.x, self.tank.y))
             
     def update(self,tank):
         self.tank = tank
     
     def tick(self):
+        
+        if(self.ticks < 10):
+            pass
+        
         if self.tank.status == "dead":
             return
         self.commands = []
@@ -57,7 +63,7 @@ class BayesAgent(object):
         self.oldlocation[self.tank.index] = curLocation
         self.goToPoint(self.tank, target)
             
-        if(curtime - self.time > 4.25 ):
+        if(curtime - self.time > 2.25 ):
 
             command = Command(self.tank.index,0,0,False)
             self.commands = []
@@ -159,4 +165,8 @@ class BayesAgent(object):
                 curY += 1
             curX += 1
             curY = yPos
+            
+        self.obsList.scanGrid(xPos,yPos,obsSize)
+            
+        
         

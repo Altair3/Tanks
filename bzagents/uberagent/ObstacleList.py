@@ -30,6 +30,7 @@ class ObstacleList(object):
                     self.daList.remove(p)
         
     def scanGrid(self, startX, startY, length):
+        length = 100
         
         self.removeCornersInBlock(startX, startY, length)
         
